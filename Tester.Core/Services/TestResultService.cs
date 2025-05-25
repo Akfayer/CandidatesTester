@@ -4,7 +4,6 @@ using Tester.Core.Models;
 using Tester.Core.Services.Interfaces;
 using Tester.Data.Entities;
 using Tester.Data.Repositories.Interfaces;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Tester.Core.Services;
 

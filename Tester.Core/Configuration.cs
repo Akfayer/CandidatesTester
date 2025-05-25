@@ -19,5 +19,7 @@ public static class Configuration
         serviceCollection.AddTransient<IQuestionService, QuestionService>();
         serviceCollection.AddTransient<ITestService, TestService>();
         serviceCollection.AddTransient<IAnswerOptionService, AnswerOptionService>();
+        serviceCollection.AddTransient<IUserAnswerService, UserAnswerService>();
+        serviceCollection.AddTransient<ITestResultService, TestResultService>();
     }
 }

@@ -1,35 +1,35 @@
-﻿using AutoMapper;
+﻿using System.Net;
+using AutoMapper;
+using CandidatesTesterAPI.DTOs.AnswerOptionDTOs;
 using CandidatesTesterAPI.DTOs;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
-using CandidatesTesterAPI.DTOs.TestDTOs;
 using Tester.Core.Models;
 using Tester.Core.Services.Interfaces;
+
 
 namespace CandidatesTesterAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class TestsController : ControllerBase
+public class AnswerOptionsController : ControllerBase
 {
-    private readonly ITestService _testService;
+    private readonly IAnswerOptionService _service;
     private readonly IMapper _mapper;
 
-    public TestsController(ITestService testService, IMapper mapper)
+    public AnswerOptionsController(IAnswerOptionService service, IMapper mapper)
     {
-        _testService = testService;
+        _service = service;
         _mapper = mapper;
     }
 
-    // GET: api/tests
-    [HttpGet]
-    public async Task<ActionResult<ApiResponse>> GetAll()
+    [HttpGet("question/{questionId:int}/correct")]
+    public async Task<ActionResult<ApiResponse>> GetCorrectAnswersByQuestion(int questionId)
     {
         var response = new ApiResponse();
         try
         {
-            var models = await _testService.GetAllTestsAsync();
-            var dtos = _mapper.Map<IEnumerable<TestResponse>>(models);
+            var models = await _service.GetCorrectAnswerOptionsAsync(questionId);
+            var dtos = _mapper.Map<List<AnswerOptionResponse>>(models);
 
             response.StatusCode = HttpStatusCode.OK;
             response.Result = dtos;
@@ -44,38 +44,8 @@ public class TestsController : ControllerBase
         }
     }
 
-    // GET: api/tests/{id}
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<ApiResponse>> GetById(int id)
-    {
-        var response = new ApiResponse();
-        try
-        {
-            var model = await _testService.GetTestByIdAsync(id);
-            if (model == null)
-            {
-                response.IsSuccess = false;
-                response.StatusCode = HttpStatusCode.NotFound;
-                response.ErrorMessages.Add("Test not found");
-                return NotFound(response);
-            }
-
-            response.StatusCode = HttpStatusCode.OK;
-            response.Result = _mapper.Map<TestResponse>(model);
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            response.IsSuccess = false;
-            response.StatusCode = HttpStatusCode.InternalServerError;
-            response.ErrorMessages.Add(ex.Message);
-            return StatusCode((int)response.StatusCode, response);
-        }
-    }
-
-    // POST: api/tests
     [HttpPost]
-    public async Task<ActionResult<ApiResponse>> Create([FromBody] TestRequest dto)
+    public async Task<ActionResult<ApiResponse>> Create([FromBody] CreateAnswerOptionRequest dto)
     {
         var response = new ApiResponse();
         if (!ModelState.IsValid)
@@ -90,14 +60,18 @@ public class TestsController : ControllerBase
 
         try
         {
-            var model = _mapper.Map<TestModel>(dto);
-            await _testService.CreateTestAsync(model);
+            var model = _mapper.Map<AnswerOptionModel>(dto);
+            await _service.CreateAnswerOptionAsync(model);
 
             response.StatusCode = HttpStatusCode.Created;
-            response.Result = null;
-            return CreatedAtAction(nameof(GetById),
-                                   new { id = model.TestId },
-                                   response);
+            return StatusCode((int)response.StatusCode, response);
+        }
+        catch (KeyNotFoundException knf)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.NotFound;
+            response.ErrorMessages.Add(knf.Message);
+            return NotFound(response);
         }
         catch (Exception ex)
         {
@@ -108,9 +82,8 @@ public class TestsController : ControllerBase
         }
     }
 
-    // PUT: api/tests/{id}
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<ApiResponse>> Update(int id, [FromBody] TestRequest dto)
+    [HttpPut]
+    public async Task<ActionResult<ApiResponse>> Update([FromBody] UpdateAnswerOptionRequest dto)
     {
         var response = new ApiResponse();
         if (!ModelState.IsValid)
@@ -125,13 +98,10 @@ public class TestsController : ControllerBase
 
         try
         {
-            var model = _mapper.Map<TestModel>(dto);
-            model.TestId = id;
-
-            await _testService.UpdateTestAsync(model);
+            var model = _mapper.Map<AnswerOptionModel>(dto);
+            await _service.UpdateAnswerOptionAsync(model);
 
             response.StatusCode = HttpStatusCode.NoContent;
-            response.Result = null;
             return NoContent();
         }
         catch (KeyNotFoundException knf)
@@ -150,14 +120,13 @@ public class TestsController : ControllerBase
         }
     }
 
-    // DELETE: api/tests/{id}
     [HttpDelete("{id:int}")]
     public async Task<ActionResult<ApiResponse>> Delete(int id)
     {
         var response = new ApiResponse();
         try
         {
-            await _testService.DeleteTestAsync(id);
+            await _service.DeleteAnswerOptionAsync(id);
             response.StatusCode = HttpStatusCode.NoContent;
             return NoContent();
         }

@@ -1,10 +1,10 @@
 ﻿using System.Net;
 
-namespace CandidatesTesterAPI.Models;
+namespace CandidatesTesterAPI.DTOs;
 
-public class APIResponse
+public class ApiResponse
 {
-    public APIResponse()
+    public ApiResponse()
     {
         ErrorMessages = new List<string>();
     }

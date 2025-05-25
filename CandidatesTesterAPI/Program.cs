@@ -1,4 +1,7 @@
 
+using Microsoft.Extensions.DependencyInjection;
+using Tester.Core;
+
 namespace CandidatesTesterAPI;
 
 public class Program
@@ -17,6 +20,7 @@ public class Program
 
         string connectionString = builder.Configuration.GetConnectionString("CandidatesTesterDb");
         Tester.Core.Configuration.Configure(builder.Services, connectionString);
+        builder.Services.AddAutoMapper(typeof(ModelsMappingProfile));
 
         var app = builder.Build();
 

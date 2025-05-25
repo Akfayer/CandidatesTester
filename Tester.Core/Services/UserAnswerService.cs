@@ -10,18 +10,12 @@ namespace Tester.Core.Services;
 public class UserAnswerService : IUserAnswerService
 {
     private readonly IRepository<UserAnswer> _userAnswerRepository;
-    private readonly IRepository<Question> _questionRepository;
-    private readonly IRepository<AnswerOption> _answerOptionRepository;
     private readonly IMapper _mapper;
 
-    public UserAnswerService(IRepository<UserAnswer> userAnswerRepository, 
-                             IRepository<Question> questionRepository,
-                             IRepository<AnswerOption> answeroptionRepository,
+    public UserAnswerService(IRepository<UserAnswer> userAnswerRepository,
                              IMapper mapper)
     {
         _userAnswerRepository = userAnswerRepository;
-        _questionRepository = questionRepository;
-        _answerOptionRepository = answeroptionRepository;
         _mapper = mapper;
     }
 
