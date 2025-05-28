@@ -14,5 +14,8 @@ public class ModelsMappingProfile:Profile
         CreateMap<TestResult, TestResultModel>().ReverseMap();
         CreateMap<User, UserModel>().ReverseMap();
         CreateMap<UserAnswer, UserAnswerModel>().ReverseMap();
+        CreateMap<User, AuthModel>()
+            .ForMember(dest => dest.Token, opt => opt.Ignore())
+            .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
     }
 }

@@ -17,7 +17,7 @@ namespace Tester.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.4")
+                .HasAnnotation("ProductVersion", "9.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -166,7 +166,6 @@ namespace Tester.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserAnswerId"));
 
                     b.Property<int?>("AnswerOptionId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
                     b.Property<int>("QuestionId")
@@ -197,7 +196,7 @@ namespace Tester.Data.Migrations
                     b.HasOne("Tester.Data.Entities.Question", "Question")
                         .WithMany("AnswerOptions")
                         .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Question");
@@ -238,12 +237,12 @@ namespace Tester.Data.Migrations
                     b.HasOne("Tester.Data.Entities.AnswerOption", "AnswerOption")
                         .WithMany("UserAnswers")
                         .HasForeignKey("AnswerOptionId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("Tester.Data.Entities.Question", "Question")
                         .WithMany("UserAnswers")
                         .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Tester.Data.Entities.User", "User")

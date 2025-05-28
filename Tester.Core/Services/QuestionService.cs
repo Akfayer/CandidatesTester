@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 using Tester.Core.Models;
 using Tester.Core.Services.Interfaces;
 using Tester.Data.Entities;

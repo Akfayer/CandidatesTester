@@ -1,0 +1,196 @@
+﻿@page "/questions/{questionId:int}/answers"
+@inject HttpClient Http
+@using System.Net.Http.Json
+@using System.Text.Json
+@using Tester.Shared.DTOs
+@using Tester.Shared.DTOs.AnswerOptionDTOs
+
+<h2>Answer Options for Question #@questionId</h2>
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+@if (AnswerOptions is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Answer Text</th>
+                <th>Is Correct</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var option in AnswerOptions)
+            {
+                <tr>
+                    <td>@option.AnswerText</td>
+                    <td>@option.IsCorrect</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="() => EditAnswer(option)">Edit</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteAnswer(option.AnswerOptionId)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<hr />
+<h3>@(Editing ? "Edit Answer Option" : "Add New Answer Option")</h3>
+
+<EditForm Model="CurrentForm" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Answer Text</label>
+        <InputText class="form-control" @bind-Value="CurrentForm.AnswerText" />
+    </div>
+
+    <div class="mb-3">
+        <label>
+            <InputCheckbox @bind-Value="CurrentForm.IsCorrect" />
+            Is Correct
+        </label>
+    </div>
+
+    <button type="submit" class="btn btn-success">
+        @(Editing ? "Update" : "Create")
+    </button>
+    @if (Editing)
+    {
+        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+    }
+</EditForm>
+
+@code {
+    [Parameter]
+    public int questionId { get; set; }
+
+    private List<AnswerOptionResponse>? AnswerOptions;
+    private string? ErrorMessage;
+
+    private bool Editing = false;
+    private int EditingOptionId;
+    private CreateAnswerOptionRequest CurrentForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentForm.QuestionId = questionId;
+        await LoadAnswerOptions();
+    }
+
+    private async Task LoadAnswerOptions()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<ApiResponse>($"api/answer_options/question/{questionId}");
+            if (response?.IsSuccess == true)
+            {
+                var raw = ((JsonElement)response.Result).GetRawText();
+                AnswerOptions = JsonSerializer.Deserialize<List<AnswerOptionResponse>>(raw);
+            }
+            else
+            {
+                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string>());
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Failed to load answers: " + ex.Message;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (!Editing)
+            {
+                var response = await Http.PostAsJsonAsync("api/answer_options", CurrentForm);
+                if (response.IsSuccessStatusCode)
+                {
+                    await LoadAnswerOptions();
+                    ResetForm();
+                }
+                else
+                {
+                    ErrorMessage = $"Failed to create. Status code: {response.StatusCode}";
+                }
+            }
+            else
+            {
+                var updateDto = new UpdateAnswerOptionRequest
+                {
+                    QuestionId = CurrentForm.QuestionId,
+                    AnswerText = CurrentForm.AnswerText,
+                    IsCorrect = CurrentForm.IsCorrect
+                };
+
+                var response = await Http.PutAsJsonAsync("api/answer_options", updateDto);
+                if (response.IsSuccessStatusCode)
+                {
+                    await LoadAnswerOptions();
+                    ResetForm();
+                }
+                else
+                {
+                    ErrorMessage = $"Failed to update. Status code: {response.StatusCode}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Error submitting form: " + ex.Message;
+        }
+    }
+
+    private void EditAnswer(AnswerOptionResponse option)
+    {
+        CurrentForm = new CreateAnswerOptionRequest
+        {
+            QuestionId = option.QuestionId,
+            AnswerText = option.AnswerText,
+            IsCorrect = option.IsCorrect
+        };
+
+        Editing = true;
+        EditingOptionId = option.AnswerOptionId;
+    }
+
+    private async Task DeleteAnswer(int id)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/answer_options/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadAnswerOptions();
+            }
+            else
+            {
+                ErrorMessage = $"Failed to delete. Status code: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Failed to delete answer: " + ex.Message;
+        }
+    }
+
+    private void CancelEdit() => ResetForm();
+
+    private void ResetForm()
+    {
+        CurrentForm = new CreateAnswerOptionRequest { QuestionId = questionId };
+        Editing = false;
+        EditingOptionId = 0;
+    }
+}

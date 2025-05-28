@@ -10,7 +10,7 @@ public class UserAnswerConfiguration : IEntityTypeConfiguration<UserAnswer>
     {
         builder.HasKey(n => n.UserAnswerId);
 
-        builder.Property(n => n.AnswerOptionId)
+        builder.Property(n => n.UserAnswerId)
                .ValueGeneratedOnAdd();
 
         builder.HasOne(u => u.User)
@@ -21,11 +21,11 @@ public class UserAnswerConfiguration : IEntityTypeConfiguration<UserAnswer>
         builder.HasOne(q => q.Question)
         .WithMany(ua => ua.UserAnswers)
         .HasForeignKey(q => q.QuestionId)
-        .OnDelete(DeleteBehavior.Cascade);
+        .OnDelete(DeleteBehavior.NoAction);
 
         builder.HasOne(ao => ao.AnswerOption)
-        .WithMany(up => up.UserAnswers)
+        .WithMany(ua => ua.UserAnswers)
         .HasForeignKey(ao => ao.AnswerOptionId)
-        .OnDelete(DeleteBehavior.Cascade);
+        .OnDelete(DeleteBehavior.NoAction);
     }
 }

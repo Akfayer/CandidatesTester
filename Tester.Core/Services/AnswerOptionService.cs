@@ -34,6 +34,14 @@ public class AnswerOptionService : IAnswerOptionService
         await _answerOptionRepository.DeleteAsync(option);
     }
 
+    public async Task<List<AnswerOptionModel>> GetAllAnswerOptionsByQuestionIdAsync(int questionId)
+    {
+        List<AnswerOption> allOptions = await _answerOptionRepository.GetQueryable()
+            .Where(a => a.QuestionId == questionId)
+            .ToListAsync();
+        return _mapper.Map<List<AnswerOptionModel>>(allOptions);
+    }
+
     public async Task<List<AnswerOptionModel>> GetCorrectAnswerOptionsAsync(int questionId)
     {
         List<AnswerOption> correctOptions = await _answerOptionRepository.GetQueryable()

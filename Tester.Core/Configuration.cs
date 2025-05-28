@@ -16,10 +16,11 @@ public static class Configuration
 
         serviceCollection.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
-        serviceCollection.AddTransient<IQuestionService, QuestionService>();
-        serviceCollection.AddTransient<ITestService, TestService>();
-        serviceCollection.AddTransient<IAnswerOptionService, AnswerOptionService>();
-        serviceCollection.AddTransient<IUserAnswerService, UserAnswerService>();
-        serviceCollection.AddTransient<ITestResultService, TestResultService>();
+        serviceCollection.AddScoped<IQuestionService, QuestionService>();
+        serviceCollection.AddScoped<ITestService, TestService>();
+        serviceCollection.AddScoped<IAnswerOptionService, AnswerOptionService>();
+        serviceCollection.AddScoped<IUserAnswerService, UserAnswerService>();
+        serviceCollection.AddScoped<ITestResultService, TestResultService>();
+        serviceCollection.AddScoped<IUserService, UserService>();
     }
 }

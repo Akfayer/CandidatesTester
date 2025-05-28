@@ -9,4 +9,5 @@ public interface IAnswerOptionService
     Task UpdateAnswerOptionAsync(AnswerOptionModel answerOptionModel);
     Task DeleteAnswerOptionAsync(int answerOptionId);
     Task<List<AnswerOptionModel>> GetCorrectAnswerOptionsAsync(int questionId);
+    Task<List<AnswerOptionModel>> GetAllAnswerOptionsByQuestionIdAsync(int questionId);
 }

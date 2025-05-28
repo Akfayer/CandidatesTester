@@ -1,0 +1,177 @@
+﻿@page "/tests/{testId:int}/questions"
+@inject HttpClient Http
+@using System.Net.Http.Json
+@using System.Text.Json
+@using Tester.Shared.DTOs
+@using Tester.Shared.Enums
+@using Tester.Shared.DTOs.QuestionDTOs
+
+<h2>Questions for Test #@testId</h2>
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+@if (Questions is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Текст</th>
+                <th>Тип</th>
+                <th>Дії</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var q in Questions)
+            {
+                <tr>
+                    <td>@q.QuestionText</td>
+                    <td>@q.TypeOfQuestion</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="() => EditQuestion(q)">Edit</button>
+                        <NavLink class="btn btn-sm btn-info" href="@($"/questions/{q.QuestionId}/answers")">
+                            View Answers
+                        </NavLink>
+                    </td>                  
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<hr />
+
+<h3>@(Editing ? "Edit Question" : "Create New Question")</h3>
+
+<EditForm Model="CurrentForm" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Question Text:</label>
+        <InputTextArea class="form-control" @bind-Value="CurrentForm.QuestionText" />
+    </div>
+
+    <div class="mb-3">
+        <label>Type:</label>
+        <InputSelect class="form-control" @bind-Value="CurrentForm.TypeOfQuestion">
+            @foreach (var type in Enum.GetValues<QuestionType>())
+            {
+                <option value="@type">@type</option>
+            }
+        </InputSelect>
+    </div>
+
+    <button type="submit" class="btn btn-success">
+        @(Editing ? "Update" : "Create")
+    </button>
+    @if (Editing)
+    {
+        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+    }
+</EditForm>
+
+@code {
+    [Parameter]
+    public int testId { get; set; }
+
+    private List<QuestionResponse>? Questions;
+    private string? ErrorMessage;
+
+    private bool Editing = false;
+    private int EditingQuestionId;
+    private CreateQuestionRequest CurrentForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentForm.TestId = testId;
+        await LoadQuestions();
+    }
+
+    private async Task LoadQuestions()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<ApiResponse>($"api/questions/test/{testId}");
+            if (response?.IsSuccess == true)
+            {
+                var raw = ((JsonElement)response.Result).GetRawText();
+                Questions = JsonSerializer.Deserialize<List<QuestionResponse>>(raw);
+            }
+            else
+            {
+                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string>());
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Failed to load questions: " + ex.Message;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (!Editing)
+            {
+                var response = await Http.PostAsJsonAsync("api/questions", CurrentForm);
+                if (response.IsSuccessStatusCode)
+                {
+                    await LoadQuestions();
+                    CurrentForm = new CreateQuestionRequest { TestId = testId };
+                }
+                else
+                {
+                    ErrorMessage = $"Failed to create. Status code: {response.StatusCode}";
+                }
+            }
+            else
+            {
+                var updateDto = new UpdateQuestionRequest
+                {
+                    QuestionText = CurrentForm.QuestionText,
+                    TypeOfQuestion = CurrentForm.TypeOfQuestion
+                };
+
+                var response = await Http.PutAsJsonAsync("api/questions/update", updateDto);
+                if (response.IsSuccessStatusCode)
+                {
+                    await LoadQuestions();
+                    CurrentForm = new CreateQuestionRequest { TestId = testId };
+                    Editing = false;
+                }
+                else
+                {
+                    ErrorMessage = $"Failed to update. Status code: {response.StatusCode}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Error submitting form: " + ex.Message;
+        }
+    }
+
+    private void EditQuestion(QuestionResponse q)
+    {
+        CurrentForm.QuestionText = q.QuestionText;
+        CurrentForm.TypeOfQuestion = q.TypeOfQuestion;
+        CurrentForm.TestId = q.TestId;
+
+        Editing = true;
+        EditingQuestionId = q.QuestionId;
+    }
+
+    private void CancelEdit()
+    {
+        Editing = false;
+        CurrentForm = new CreateQuestionRequest { TestId = testId };
+    }
+}
