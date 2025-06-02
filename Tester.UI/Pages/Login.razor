@@ -7,6 +7,8 @@
 @using System.Text.Json
 @using Tester.Shared.DTOs
 @using Tester.Shared.DTOs.AuthDTOs
+@inject Auth.AuthService AuthService
+
 
 <div class="d-flex justify-content-center align-items-center min-vh-100">
     <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
@@ -62,6 +64,8 @@
                 await JS.InvokeVoidAsync("localStorage.setItem", "authToken", auth.Token);
                 await JS.InvokeVoidAsync("localStorage.setItem", "userRole", auth.Role);
                 await JS.InvokeVoidAsync("localStorage.setItem", "userName", auth.FullName);
+                await JS.InvokeVoidAsync("localStorage.setItem", "userId", auth.UserId);
+                AuthService.NotifyAuthenticationChanged();
 
                 Navigation.NavigateTo("/");
             }

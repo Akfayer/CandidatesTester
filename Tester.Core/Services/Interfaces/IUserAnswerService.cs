@@ -7,4 +7,5 @@ public interface IUserAnswerService
 {
     Task SaveUserAnswerAsync(UserAnswerModel answer);
     Task<IEnumerable<UserAnswerModel>> GetUserAnswersAsync(int userId);
+    Task UpdateUserAnswerAsync(UserAnswerModel answer);
 }

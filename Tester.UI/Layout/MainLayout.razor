@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@inject Tester.UI.Auth.AuthService AuthService
+@inject NavigationManager NavigationManager
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -6,7 +9,17 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <div class="authentication-buttons">
+                @if (IsAuthenticated)
+                {
+                    <button class="btn btn-primary" @onclick="Logout">Вихід</button>
+                }
+                else
+                {
+                    <button class="btn btn-secondary me-2" @onclick="NavigateToRegister">Реєстрація</button>
+                    <button class="btn btn-primary" @onclick="NavigateToLogin">Авторизація</button>
+                }
+            </div>
         </div>
 
         <article class="content px-4">
@@ -14,3 +27,33 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool IsAuthenticated { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthService.OnAuthStateChanged += UpdateAuthState;
+        IsAuthenticated = await AuthService.IsAuthenticated();
+    }
+
+    private async void UpdateAuthState()
+    {
+        IsAuthenticated = await AuthService.IsAuthenticated();
+        StateHasChanged();
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.Logout();
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void NavigateToRegister() => NavigationManager.NavigateTo("/register");
+    private void NavigateToLogin() => NavigationManager.NavigateTo("/login");
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= UpdateAuthState;
+    }
+}

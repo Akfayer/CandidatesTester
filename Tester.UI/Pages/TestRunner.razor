@@ -1,0 +1,214 @@
+﻿@page "/test/{testId:int}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@using Tester.Shared.DTOs
+@using Tester.Shared.DTOs.QuestionDTOs
+@using Tester.Shared.DTOs.AnswerOptionDTOs
+@using Tester.Shared.DTOs.UserAnswerDTOs
+@using Tester.Shared.DTOs.TestResultDTOs
+@using System.Text.Json
+
+<h3 class="mb-3">Test Progress</h3>
+
+@if (Questions == null || AnswerMap == null)
+{
+    <p><em>Loading test...</em></p>
+}
+else
+{
+    <div class="mb-3">
+        <strong>Time Left: </strong> @FormattedTime
+    </div>
+
+    <div class="mb-3 d-flex flex-wrap gap-2">
+        @for (int i = 0; i < Questions.Count; i++)
+        {
+            int index = i;
+            <button class="btn @(index == CurrentQuestionIndex ? "btn-primary" : "btn-outline-primary")"
+            @onclick="@(() => SelectQuestion(index))"
+            disabled="@IsSubmitted">
+                @(index + 1)
+            </button>
+        }
+    </div>
+
+    @if (CurrentQuestion != null)
+    {
+        <div class="mb-3">
+            <h5>@CurrentQuestion.QuestionText</h5>
+            <div class="list-group">
+                @foreach (var option in AnswerMap[CurrentQuestion.QuestionId])
+                {
+                    <label class="list-group-item">
+                        <input type="radio" name="answer"
+                        value="@option.AnswerOptionId"
+                        @onchange="() => SelectAnswer(option.AnswerOptionId)"
+                        checked="@IsOptionSelected(CurrentQuestion.QuestionId, option.AnswerOptionId)"
+                        disabled="@IsSubmitted" />
+                        @option.AnswerText
+                    </label>
+                }
+            </div>
+
+            <div class="mt-3">
+                <button class="btn btn-secondary" @onclick="SubmitAnswer" disabled="@IsSubmitted">Submit Answer</button>
+            </div>
+        </div>
+    }
+
+    <button class="btn btn-success mt-4" @onclick="SubmitTest" disabled="@IsSubmitted">Submit Entire Test</button>
+}
+
+@code {
+    [Parameter]
+    public int testId { get; set; }
+
+    private List<QuestionResponse>? Questions;
+    private Dictionary<int, List<AnswerOptionResponse>>? AnswerMap;
+    private Dictionary<int, int> SelectedAnswers = new();
+    private QuestionResponse? CurrentQuestion;
+    private int CurrentQuestionIndex = 0;
+
+    private bool IsSubmitted = false;
+    private int RemainingSeconds = 300;
+    private string FormattedTime => $"{RemainingSeconds / 60:D2}:{RemainingSeconds % 60:D2}";
+    private System.Timers.Timer? Timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadQuestionsAndAnswers();
+        StartTimer();
+    }
+
+    private async Task LoadQuestionsAndAnswers()
+    {
+        var questionResp = await Http.GetFromJsonAsync<ApiResponse>($"api/questions/test/{testId}");
+        var qJson = ((JsonElement)questionResp.Result).GetRawText();
+        Questions = JsonSerializer.Deserialize<List<QuestionResponse>>(qJson);
+
+        AnswerMap = new();
+
+        foreach (var q in Questions)
+        {
+            var answerResp = await Http.GetFromJsonAsync<ApiResponse>($"api/answer_options/question/{q.QuestionId}");
+            var aJson = ((JsonElement)answerResp.Result).GetRawText();
+            var options = JsonSerializer.Deserialize<List<AnswerOptionResponse>>(aJson);
+            AnswerMap[q.QuestionId] = options;
+        }
+
+        if (Questions.Count > 0)
+        {
+            CurrentQuestion = Questions[0];
+            CurrentQuestionIndex = 0;
+        }
+    }
+
+    private void SelectQuestion(int index)
+    {
+        if (index >= 0 && index < Questions?.Count)
+        {
+            CurrentQuestionIndex = index;
+            CurrentQuestion = Questions[CurrentQuestionIndex];
+        }
+    }
+
+    private void SelectAnswer(int answerOptionId)
+    {
+        if (CurrentQuestion != null)
+        {
+            SelectedAnswers[CurrentQuestion.QuestionId] = answerOptionId;
+        }
+    }
+
+    private bool IsOptionSelected(int questionId, int optionId)
+    {
+        return SelectedAnswers.ContainsKey(questionId) && SelectedAnswers[questionId] == optionId;
+    }
+
+    private async Task SubmitAnswer()
+    {
+        if (CurrentQuestion == null || !SelectedAnswers.ContainsKey(CurrentQuestion.QuestionId)) return;
+
+        var userId = await GetCurrentUserId();
+
+        var dto = new SubmitUserAnswerRequest
+            {
+                QuestionId = CurrentQuestion.QuestionId,
+                AnswerOptionId = SelectedAnswers[CurrentQuestion.QuestionId],
+                UserId = userId
+            };
+
+        var result = await Http.PostAsJsonAsync("api/user_answers", dto);
+        if (!result.IsSuccessStatusCode)
+        {
+            await JS.InvokeVoidAsync("alert", "Failed to submit answer.");
+        }
+    }
+
+    private void StartTimer()
+    {
+        Timer = new System.Timers.Timer(1000);
+        Timer.Elapsed += (s, e) =>
+        {
+            RemainingSeconds--;
+            InvokeAsync(StateHasChanged);
+
+            if (RemainingSeconds <= 0)
+            {
+                Timer.Stop();
+                InvokeAsync(SubmitTest);
+            }
+        };
+        Timer.Start();
+    }
+
+    private async Task SubmitTest()
+    {
+        if (IsSubmitted) return;
+        IsSubmitted = true;
+        Timer?.Stop();
+
+        var userId = await GetCurrentUserId();
+
+        var answerList = SelectedAnswers
+            .Select(kvp => new SubmitUserAnswerRequest
+                {
+                    UserId = userId,
+                    QuestionId = kvp.Key,
+                    AnswerOptionId = kvp.Value
+                })
+            .ToList();
+
+        var checkRequest = new
+        {
+            UserId = userId,
+            TestId = testId,
+            Answers = answerList
+        };
+
+        var response = await Http.PostAsJsonAsync("api/results/check", checkRequest);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            await JS.InvokeVoidAsync("alert", "Test submitted, but result could not be processed.");
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        var apiResp = await response.Content.ReadFromJsonAsync<ApiResponse>();
+        var rawResult = ((JsonElement)apiResp.Result).GetRawText();
+        var testResult = JsonSerializer.Deserialize<TestResultResponse>(rawResult);
+
+        await JS.InvokeVoidAsync("alert", $"Test submitted!\nScore: {testResult.Score}/{testResult.MaxScore}");
+        Navigation.NavigateTo("/");
+    }
+
+
+
+    private async Task<int> GetCurrentUserId()
+    {
+        var userIdString = await JS.InvokeAsync<string>("localStorage.getItem", "userId");
+        return int.TryParse(userIdString, out int id) ? id : 0;
+    }
+}

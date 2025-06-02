@@ -37,4 +37,15 @@ public class UserAnswerService : IUserAnswerService
 
         await _userAnswerRepository.CreateAsync(userAnswer);
     }
+
+    public async Task UpdateUserAnswerAsync(UserAnswerModel userAnswerModel)
+    {
+        var existingAnswer = await _userAnswerRepository.GetByIdAsync(userAnswerModel.UserAnswerId);
+        if (existingAnswer == null)
+            throw new KeyNotFoundException("Answer not found");
+
+        _mapper.Map(userAnswerModel, existingAnswer);
+        await _userAnswerRepository.UpdateAsync(existingAnswer);
+    }
+
 }

@@ -23,7 +23,6 @@ public class AnswerOptionsController : ControllerBase
         _mapper = mapper;
     }
 
-    [Authorize(Roles = "Admin")]
     [HttpGet("question/{questionId:int}/correct")]
     public async Task<ActionResult<ApiResponse>> GetCorrectAnswersByQuestion(int questionId)
     {
@@ -46,7 +45,6 @@ public class AnswerOptionsController : ControllerBase
         }
     }
 
-    [Authorize(Roles = "Admin")]
     [HttpGet("question/{questionId:int}")]
     public async Task<ActionResult<ApiResponse>> GetAllAnswersByQuestion(int questionId)
     {

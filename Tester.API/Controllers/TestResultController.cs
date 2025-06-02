@@ -91,6 +91,41 @@ public class TestResultsController : ControllerBase
         }
     }
 
+    [HttpPost("check")]
+    public async Task<ActionResult<ApiResponse>> CheckTest([FromBody] CheckTestRequest dto)
+    {
+        var response = new ApiResponse();
+        if (!ModelState.IsValid)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.BadRequest;
+            response.ErrorMessages.AddRange(ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage));
+            return BadRequest(response);
+        }
+
+        try
+        {
+            var userAnswers = _mapper.Map<List<UserAnswerModel>>(dto.Answers);
+
+            var resultModel = await _service.CheckTestAsync(dto.UserId, dto.TestId, userAnswers);
+            var resultDto = _mapper.Map<TestResultResponse>(resultModel);
+
+            response.StatusCode = HttpStatusCode.OK;
+            response.Result = resultDto;
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.InternalServerError;
+            response.ErrorMessages.Add(ex.Message);
+            return StatusCode((int)response.StatusCode, response);
+        }
+    }
+
+
     [HttpPost]
     public async Task<ActionResult<ApiResponse>> Create([FromBody] CreateTestResultRequest dto)
     {

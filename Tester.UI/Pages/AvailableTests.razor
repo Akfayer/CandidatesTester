@@ -1,0 +1,66 @@
+﻿@page "/tests"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@using Tester.Shared.DTOs
+@using Tester.Shared.DTOs.TestDTOs
+@using System.Text.Json
+@using System.Net.Http.Json
+
+<h3>Available Tests</h3>
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+@if (Tests is null)
+{
+    <p><em>Loading tests...</em></p>
+}
+else if (!Tests.Any())
+{
+    <p>No tests available at the moment. Please check back later!</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var test in Tests)
+        {
+            <button class="list-group-item list-group-item-action"
+                    @onclick="() => StartTest(test.TestId)">
+                <strong>@test.TestTitle</strong> — @test.TestDescription
+            </button>
+        }
+    </div>
+}
+
+@code {
+    private List<TestResponse>? Tests;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<ApiResponse>("api/tests");
+            if (response?.IsSuccess == true)
+            {
+                var json = ((JsonElement)response.Result).GetRawText();
+                Tests = JsonSerializer.Deserialize<List<TestResponse>>(json);
+            }
+            else
+            {
+                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string> { "Failed to load tests." });
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading tests: {ex.Message}";
+        }
+    }
+
+    private void StartTest(int testId)
+    {
+        Navigation.NavigateTo($"/test/{testId}");
+    }
+}

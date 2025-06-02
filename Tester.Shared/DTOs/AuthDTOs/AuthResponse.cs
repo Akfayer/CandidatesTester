@@ -3,7 +3,10 @@
 namespace Tester.Shared.DTOs.AuthDTOs;
 
 public class AuthResponse
+
 {
+    [JsonPropertyName("userId")]
+    public int UserId { get; set; }
     [JsonPropertyName("token")]
     public string Token { get; set; }
     [JsonPropertyName("role")]

@@ -22,7 +22,6 @@ public class QuestionsController : ControllerBase
         _mapper = mapper;
     }
 
-    [Authorize(Roles = "Admin")]
     [HttpGet("test/{testId:int}")]
     public async Task<ActionResult<ApiResponse>> GetByTest(int testId)
     {

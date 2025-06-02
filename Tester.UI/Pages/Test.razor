@@ -1,5 +1,6 @@
-﻿@page "/tests"
+﻿@page "/admin/tests"
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
 @using System.Net.Http.Json
 @using System.Text.Json
 @using Tester.Shared.DTOs
@@ -198,11 +199,9 @@ else
         CurrentTest = new();
     }
 
+
     private async Task<bool> Confirm(string message)
     {
-        return await Task.FromResult(confirm(message));
+        return await JSRuntime.InvokeAsync<bool>("confirm", message);
     }
-
-    [JSInvokable]
-    public static bool confirm(string message) => true;
 }

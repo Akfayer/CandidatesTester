@@ -52,12 +52,9 @@ public class UserService : IUserService
 
         var token = GenerateJwtToken(user);
 
-        return new AuthModel
-        {
-            Token = token,
-            Role = user.Role.ToString(),
-            FullName = user.FullName
-        };
+        var authModel = _mapper.Map<AuthModel>(user);
+
+        return authModel;
     }
 
     private string GenerateJwtToken(User user)

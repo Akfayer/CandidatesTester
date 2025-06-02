@@ -5,6 +5,7 @@ using Tester.Shared.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Tester.Core.Models;
 using Tester.Core.Services.Interfaces;
+using Tester.Shared.DTOs.UserAswerDTOs;
 
 namespace Tester.API.Controllers;
 
@@ -82,5 +83,46 @@ public class UserAnswersController : ControllerBase
             return StatusCode((int)response.StatusCode, response);
         }
     }
+
+    [HttpPut]
+    public async Task<ActionResult<ApiResponse>> UpdateAnswer([FromBody] UpdateUserAnswerRequest dto)
+    {
+        var response = new ApiResponse();
+        if (!ModelState.IsValid)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.BadRequest;
+            response.ErrorMessages.AddRange(ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage));
+            return BadRequest(response);
+        }
+
+        try
+        {
+            var model = _mapper.Map<UserAnswerModel>(dto);
+            model.SubmittedDate = DateTime.UtcNow;
+
+            await _service.UpdateUserAnswerAsync(model);
+
+            response.StatusCode = HttpStatusCode.NoContent;
+            return StatusCode((int)response.StatusCode, response);
+        }
+        catch (KeyNotFoundException knf)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.NotFound;
+            response.ErrorMessages.Add(knf.Message);
+            return NotFound(response);
+        }
+        catch (Exception ex)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.InternalServerError;
+            response.ErrorMessages.Add(ex.Message);
+            return StatusCode((int)response.StatusCode, response);
+        }
+    }
+
 }
 
