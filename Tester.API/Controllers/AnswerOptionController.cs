@@ -107,8 +107,8 @@ public class AnswerOptionsController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpPut]
-    public async Task<ActionResult<ApiResponse>> Update ([FromBody] UpdateAnswerOptionRequest dto)
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<ApiResponse>> Update (int id, [FromBody] UpdateAnswerOptionRequest dto)
     {
         var response = new ApiResponse();
         if (!ModelState.IsValid)
@@ -124,6 +124,7 @@ public class AnswerOptionsController : ControllerBase
         try
         {
             var model = _mapper.Map<AnswerOptionModel>(dto);
+            model.AnswerOptionId = id;
             await _service.UpdateAnswerOptionAsync(model);
 
             response.StatusCode = HttpStatusCode.NoContent;
