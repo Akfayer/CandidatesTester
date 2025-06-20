@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using Tester.Core.Models;
@@ -97,6 +98,29 @@ public class AuthController : ControllerBase
             response.IsSuccess = false;
             response.StatusCode = HttpStatusCode.InternalServerError;
             response.ErrorMessages.Add("An unexpected error occurred during login.");
+            return StatusCode((int)response.StatusCode, response);
+        }
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("users")]
+    public async Task<ActionResult<ApiResponse>> GetAllUsers()
+    {
+        var response = new ApiResponse();
+
+        try
+        {
+            var users = await _userService.GetAllUsersAsync();
+            response.Result = users;
+            response.IsSuccess = true;
+            response.StatusCode = HttpStatusCode.OK;
+            return Ok(response);
+        }
+        catch (Exception)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.InternalServerError;
+            response.ErrorMessages.Add("An unexpected error occurred while retrieving users.");
             return StatusCode((int)response.StatusCode, response);
         }
     }

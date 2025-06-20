@@ -1,0 +1,281 @@
+﻿@page "/admin/user-results"
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+@using Tester.Shared.DTOs
+@using Tester.Shared.DTOs.UserDTOs
+@using Tester.Shared.DTOs.AuthDTOs
+@using Tester.Shared.DTOs.TestResultDTOs
+@using Tester.Shared.DTOs.TestDTOs
+@using System.Text.Json
+@using System.Linq
+
+<PageTitle>Результати користувачів (Адмін)</PageTitle>
+
+<div class="admin-results-container container mt-4">
+    <h2 class="mb-4 text-center section-title">
+        <i class="bi bi-person-lines-fill section-icon"></i> Результати Тестів Користувачів
+    </h2>
+
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="alert alert-danger fade show custom-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill alert-icon"></i> @ErrorMessage
+            <button type="button" class="btn-close" @onclick="ClearErrorMessage" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (IsLoading)
+    {
+        <div class="loading-panel p-4 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Завантаження...</span>
+            </div>
+            <p class="mt-2"><em>Завантаження даних про результати користувачів...</em></p>
+        </div>
+    }
+    else if (!HasData)
+    {
+        <div class="alert alert-info text-center empty-state" role="alert">
+            <i class="bi bi-info-circle-fill info-icon-small"></i>
+            <p class="mb-0">Наразі немає зареєстрованих кандидатів або вони ще не проходили тести.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm results-card">
+            <div class="card-header bg-dark text-white card-header-custom">
+                <h4 class="mb-0">Огляд усіх результатів</h4>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 admin-results-table">
+                        <thead class="table-dark">
+                            <tr>
+                                <th scope="col" @onclick="() => SortBy(Column(2))" class="sortable-header">
+                                    Кандидат
+                                    <i class="bi @GetSortIcon(Column(2)) ms-2"></i>
+                                </th>
+                                <th scope="col" @onclick="() => SortBy(Column(3))" class="sortable-header">
+                                    Тест
+                                    <i class="bi @GetSortIcon(Column(3)) ms-2"></i>
+                                </th>
+                                <th scope="col" @onclick="() => SortBy(Column(1))" class="sortable-header text-center">
+                                    Результат
+                                    <i class="bi @GetSortIcon(Column(1)) ms-2"></i>
+                                </th>
+                                <th scope="col" @onclick="() => SortBy(Column(4))" class="sortable-header text-center">
+                                    Дата проходження
+                                    <i class="bi @GetSortIcon(Column(4)) ms-2"></i>
+                                </th>
+                                <th scope="col" class="text-center actions-col">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var resultEntry in FilteredSortedResults)
+                            {
+                                <tr class="table-row-hover">
+                                    <td class="align-middle user-info-cell">
+                                        <div class="fw-bold">@resultEntry.UserFullName</div>
+                                        <small class="text-muted">(@resultEntry.UserLogin)</small>
+                                    </td>
+                                    <td class="align-middle test-title-cell">@resultEntry.TestTitle</td>
+                                    <td class="align-middle text-center score-cell">
+                                        <span class="badge @GetScoreBadgeClass(resultEntry.Score, resultEntry.MaxScore)">@resultEntry.Score / @resultEntry.MaxScore</span>
+                                    </td>
+                                    <td class="align-middle text-center date-cell">@resultEntry.CompletedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td class="align-middle text-center">
+                                        <button class="btn btn-sm btn-outline-info view-details-btn" @onclick="() => ViewUserResultDetails(resultEntry.UserId, resultEntry.TestId)" title="Переглянути деталі">
+                                            <i class="bi bi-eye"></i> <span class="d-none d-md-inline">Деталі</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Внутрішній клас моделі для відображення
+    private class TestResultDisplayModel
+    {
+        public int UserId { get; set; }
+        public string UserFullName { get; set; } = string.Empty;
+        public string UserLogin { get; set; } = string.Empty;
+
+        public int TestId { get; set; }
+        public string TestTitle { get; set; } = string.Empty;
+
+        public int Score { get; set; }
+        public int MaxScore { get; set; }
+        public DateTime CompletedAt { get; set; }
+    }
+
+    private bool IsLoading = true;
+    private List<TestResultDisplayModel> AllResults = new();
+    private bool HasData => AllResults.Any();
+    private string? ErrorMessage;
+
+    private string SortColumn = "CompletedAt"; // За замовчуванням сортуємо за датою
+    private bool SortAscending = false; // За замовчуванням спадання
+
+    private IEnumerable<TestResultDisplayModel> FilteredSortedResults
+    {
+        get
+        {
+            var query = AllResults.AsEnumerable();
+
+            switch (SortColumn)
+            {
+                case "Score":
+                    query = SortAscending ? query.OrderBy(r => r.Score) : query.OrderByDescending(r => r.Score);
+                    break;
+                case "UserFullName":
+                    query = SortAscending ? query.OrderBy(r => r.UserFullName) : query.OrderByDescending(r => r.UserFullName);
+                    break;
+                case "TestTitle":
+                    query = SortAscending ? query.OrderBy(r => r.TestTitle) : query.OrderByDescending(r => r.TestTitle);
+                    break;
+                case "CompletedAt":
+                    query = SortAscending ? query.OrderBy(r => r.CompletedAt) : query.OrderByDescending(r => r.CompletedAt);
+                    break;
+            }
+
+            return query;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ErrorMessage = null;
+        try
+        {
+            // Отримання всіх користувачів
+            var usersResponse = await Http.GetFromJsonAsync<ApiResponse>("api/auth/users");
+            List<UserResponse> allUsers = new();
+            if (usersResponse?.IsSuccess == true && usersResponse.Result is JsonElement usersJson)
+            {
+                allUsers = JsonSerializer.Deserialize<List<UserResponse>>(usersJson.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+            }
+            else
+            {
+                ErrorMessage = $"Помилка завантаження користувачів: {string.Join("; ", usersResponse?.ErrorMessages ?? new List<string> { "Невідома помилка." })}";
+                return;
+            }
+
+            // Кеш для назв тестів, щоб уникнути повторних запитів до API
+            Dictionary<int, string> testTitlesCache = new();
+
+            foreach (var user in allUsers)
+            {
+                // Отримання результатів для кожного кандидата
+                var resultResp = await Http.GetFromJsonAsync<ApiResponse>($"api/results/user/{user.UserId}");
+                if (resultResp?.IsSuccess == true && resultResp.Result is JsonElement rjson)
+                {
+                    var resultList = JsonSerializer.Deserialize<List<TestResultResponse>>(rjson.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+
+                    foreach (var result in resultList)
+                    {
+                        // Отримання назви тесту з кешу або API
+                        if (!testTitlesCache.ContainsKey(result.TestId))
+                        {
+                            var testResp = await Http.GetFromJsonAsync<ApiResponse>($"api/tests/{result.TestId}");
+                            if (testResp?.IsSuccess == true && testResp.Result is JsonElement tjson)
+                            {
+                                var test = JsonSerializer.Deserialize<TestResponse>(tjson.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                                testTitlesCache[result.TestId] = test?.TestTitle ?? $"Тест #{result.TestId}";
+                            }
+                            else
+                            {
+                                testTitlesCache[result.TestId] = $"Тест #{result.TestId} (назву не знайдено)";
+                            }
+                        }
+
+                        AllResults.Add(new TestResultDisplayModel
+                            {
+                                UserId = user.UserId,
+                                UserFullName = user.FullName,
+                                UserLogin = user.Login,
+                                TestId = result.TestId,
+                                TestTitle = testTitlesCache[result.TestId],
+                                Score = result.Score,
+                                MaxScore = result.MaxScore,
+                                CompletedAt = result.CompletedAt
+                            });
+                    }
+                }
+            }
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized || ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            ErrorMessage = "У вас немає прав доступу до цієї сторінки. Будь ласка, авторизуйтесь як адміністратор.";
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Помилка при завантаженні результатів: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string Column(int a)
+    {
+        return a switch
+        {
+            1 => "Score",
+            2 => "UserFullName",
+            3 => "TestTitle",
+            4 => "CompletedAt",
+            _ => throw new ArgumentOutOfRangeException(nameof(a), $"Невідомий номер стовпця: {a}")
+        };
+    }
+
+    private void SortBy(string columnName)
+    {
+        if (SortColumn == columnName)
+        {
+            SortAscending = !SortAscending;
+        }
+        else
+        {
+            SortColumn = columnName;
+            SortAscending = false;
+        }
+    }
+
+    private string GetSortIcon(string columnName)
+    {
+        if (SortColumn != columnName)
+        {
+            return "bi-arrows-vertical";
+        }
+        return SortAscending ? "bi-arrow-up" : "bi-arrow-down";
+    }
+
+    private string GetScoreBadgeClass(int score, int maxScore)
+    {
+        if (maxScore == 0) return "bg-secondary";
+        double percentage = (double)score / maxScore;
+        if (percentage >= 0.8) return "bg-success";
+        if (percentage >= 0.5) return "bg-warning text-dark";
+        return "bg-danger";
+    }
+
+    private void ViewUserResultDetails(int userId, int testId)
+    {
+        JSRuntime.InvokeVoidAsync("alert", $"Перегляд деталей для користувача #{userId} по тесту #{testId} (цей функціонал ще не реалізовано).");
+    }
+
+    private void ClearErrorMessage()
+    {
+        ErrorMessage = null;
+    }
+}

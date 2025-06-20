@@ -77,8 +77,8 @@ public class QuestionsController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpPut("update")]
-    public async Task<ActionResult<ApiResponse>> Update([FromBody] UpdateQuestionRequest dto)
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<ApiResponse>> Update(int id, [FromBody] UpdateQuestionRequest dto)
     {
         var response = new ApiResponse();
         if (!ModelState.IsValid)
@@ -90,11 +90,39 @@ public class QuestionsController : ControllerBase
                 .Select(e => e.ErrorMessage));
             return BadRequest(response);
         }
-
         try
         {
             var model = _mapper.Map<QuestionModel>(dto);
-            await _questionService.ChangeQuestionTypeAsync(model);
+            model.QuestionId = id;
+            await _questionService.UpdateQuestionAsync(model);
+
+            response.StatusCode = HttpStatusCode.NoContent;
+            return NoContent();
+        }
+        catch (KeyNotFoundException knf)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.NotFound;
+            response.ErrorMessages.Add(knf.Message);
+            return NotFound(response);
+        }
+        catch (Exception ex)
+        {
+            response.IsSuccess = false;
+            response.StatusCode = HttpStatusCode.InternalServerError;
+            response.ErrorMessages.Add(ex.Message);
+            return StatusCode((int)response.StatusCode, response);
+        }
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
+    {
+        var response = new ApiResponse();
+        try
+        {
+            await _questionService.DeleteQuestionAsync(id);
 
             response.StatusCode = HttpStatusCode.NoContent;
             return NoContent();

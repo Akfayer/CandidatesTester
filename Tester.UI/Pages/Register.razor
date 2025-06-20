@@ -7,7 +7,7 @@
 
 <div class="d-flex justify-content-center align-items-center min-vh-100">
     <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
-        <h3 class="card-title text-center mb-4">Register</h3>
+        <h3 class="card-title text-center mb-4">Реєстрація</h3>
 
         @if (!string.IsNullOrEmpty(ErrorMessage))
         {
@@ -19,22 +19,22 @@
             <ValidationSummary />
 
             <div class="mb-3">
-                <label for="loginInput" class="form-label">Login</label>
+                <label for="loginInput" class="form-label">Логін</label>
                 <InputText id="loginInput" class="form-control" @bind-Value="RegisterModel.Login" />
             </div>
 
             <div class="mb-3">
-                <label for="passwordInput" class="form-label">Password</label>
+                <label for="passwordInput" class="form-label">Пароль</label>
                 <InputText id="passwordInput" type="password" class="form-control" @bind-Value="RegisterModel.Password" />
             </div>
 
             <div class="mb-3">
-                <label for="fullNameInput" class="form-label">Full Name</label>
+                <label for="fullNameInput" class="form-label">ПІБ</label>
                 <InputText id="fullNameInput" class="form-control" @bind-Value="RegisterModel.FullName" />
             </div>
 
             <div class="d-grid gap-2">
-                <button class="btn btn-primary" type="submit">Register</button>
+                <button class="btn btn-primary" type="submit">Зареєструватися</button>
             </div>
         </EditForm>
     </div>

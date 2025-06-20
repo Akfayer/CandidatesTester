@@ -5,7 +5,6 @@ using Tester.Shared.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Tester.Core.Models;
 using Tester.Core.Services.Interfaces;
-using Tester.Shared.DTOs.UserAswerDTOs;
 
 namespace Tester.API.Controllers;
 

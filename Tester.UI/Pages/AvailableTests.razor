@@ -6,61 +6,108 @@
 @using System.Text.Json
 @using System.Net.Http.Json
 
-<h3>Available Tests</h3>
+<PageTitle>Доступні Тести</PageTitle>
 
-@if (!string.IsNullOrWhiteSpace(ErrorMessage))
-{
-    <div class="alert alert-danger">@ErrorMessage</div>
-}
+<div class="tests-page-container container mt-5">
+    <h2 class="text-center mb-4 tests-page-title">
+        <i class="bi bi-list-check title-icon"></i> Доступні Тести
+    </h2>
 
-@if (Tests is null)
-{
-    <p><em>Loading tests...</em></p>
-}
-else if (!Tests.Any())
-{
-    <p>No tests available at the moment. Please check back later!</p>
-}
-else
-{
-    <div class="list-group">
-        @foreach (var test in Tests)
-        {
-            <button class="list-group-item list-group-item-action"
-                    @onclick="() => StartTest(test.TestId)">
-                <strong>@test.TestTitle</strong> — @test.TestDescription
-            </button>
-        }
-    </div>
-}
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="alert alert-danger fade show custom-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill alert-icon"></i> @ErrorMessage
+            <button type="button" class="btn-close" @onclick="ClearErrorMessage" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (Tests is null)
+    {
+        <div class="text-center loading-panel p-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Завантаження...</span>
+            </div>
+            <p class="mt-3"><em>Завантаження тестів...</em></p>
+        </div>
+    }
+    else if (!Tests.Any())
+    {
+        <div class="alert alert-info text-center empty-state" role="alert">
+            <i class="bi bi-info-circle-fill info-icon"></i>
+            <h4 class="alert-heading">Наразі немає доступних тестів.</h4>
+            <p>Будь ласка, перевірте пізніше, або зверніться до адміністратора.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var test in Tests)
+            {
+                <div class="col">
+                    <div class="test-card card h-100 shadow-sm" @onclick="() => StartTest(test.TestId)">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary test-title">
+                                <i class="bi bi-journal-text card-icon"></i> @test.TestTitle
+                            </h5>
+                            <p class="card-text text-muted test-description">
+                                @test.TestDescription
+                            </p>
+                            <div class="text-end mt-3">
+                                <button class="btn btn-outline-primary btn-sm start-test-btn">
+                                    Розпочати тест <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
 
 @code {
     private List<TestResponse>? Tests;
     private string? ErrorMessage;
 
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadTestsAsync();
+    }
+
+    private async Task LoadTestsAsync()
+    {
+        ErrorMessage = null;
         try
         {
             var response = await Http.GetFromJsonAsync<ApiResponse>("api/tests");
             if (response?.IsSuccess == true)
             {
-                var json = ((JsonElement)response.Result).GetRawText();
-                Tests = JsonSerializer.Deserialize<List<TestResponse>>(json);
+                var json = ((JsonElement)response.Result!).GetRawText();
+                Tests = JsonSerializer.Deserialize<List<TestResponse>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
             else
             {
-                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string> { "Failed to load tests." });
+                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string> { "Невідома помилка під час завантаження тестів." });
             }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            ErrorMessage = $"Помилка підключення до сервера: {httpEx.Message}";
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Error loading tests: {ex.Message}";
+            ErrorMessage = "Не вдалося завантажити тести: " + ex.Message;
         }
     }
 
     private void StartTest(int testId)
     {
         Navigation.NavigateTo($"/test/{testId}");
+    }
+
+    private void ClearErrorMessage()
+    {
+        ErrorMessage = null;
     }
 }

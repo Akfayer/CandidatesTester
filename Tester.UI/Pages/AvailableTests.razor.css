@@ -1,0 +1,131 @@
+﻿.tests-page-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+.tests-page-title {
+    color: #343a40;
+    font-weight: 600;
+    font-size: 2.5rem;
+    margin-bottom: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.title-icon {
+    font-size: 2.5rem;
+    margin-right: 15px;
+    color: #007bff;
+}
+
+.custom-alert {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+.alert-icon {
+    font-size: 1.2rem;
+    margin-right: 10px;
+}
+
+.custom-alert .btn-close {
+    margin-left: auto;
+}
+
+.loading-panel {
+    background-color: #f0f2f5;
+    border-radius: 10px;
+    padding: 40px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.spinner-border {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-width: 0.35em;
+    color: #007bff;
+}
+
+.loading-panel p {
+    font-size: 1.1rem;
+    color: #555;
+}
+
+
+.empty-state {
+    padding: 30px;
+    border-radius: 10px;
+    background-color: #e9f7fe;
+    border-color: #b0e0ff;
+    color: #0056b3;
+    font-size: 1.1rem;
+}
+
+    .empty-state .info-icon {
+        font-size: 3rem;
+        color: #007bff;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .empty-state .alert-heading {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: #0056b3;
+    }
+
+.test-card {
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background-color: #ffffff;
+    overflow: hidden;
+}
+
+    .test-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        border-color: #007bff;
+    }
+
+.test-title {
+    font-weight: 700;
+    font-size: 1.6rem;
+    margin-bottom: 0.75rem;
+    color: #007bff;
+    display: flex;
+    align-items: center;
+}
+
+.card-icon {
+    font-size: 1.8rem;
+    margin-right: 10px;
+    color: #28a745;
+}
+
+.test-description {
+    font-size: 1rem;
+    color: #6c757d;
+    line-height: 1.6;
+}
+
+.start-test-btn {
+    font-weight: 600;
+    border-radius: 20px;
+    padding: 0.4rem 1.2rem;
+    transition: all 0.3s ease;
+}
+
+    .start-test-btn:hover {
+        background-color: #007bff;
+        color: white;
+        box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
+    }

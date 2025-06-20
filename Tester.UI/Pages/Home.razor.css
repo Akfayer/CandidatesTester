@@ -1,0 +1,89 @@
+﻿.hero-section {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border-radius: 1rem;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.display-3 {
+    font-size: 3.5rem;
+}
+
+.fs-4 {
+    font-size: 1.5rem;
+}
+
+.btn-primary {
+    background-color: #28a745;
+    border-color: #28a745;
+    transition: all 0.3s ease;
+}
+
+    .btn-primary:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+        transform: translateY(-2px);
+    }
+
+.btn-outline-light {
+    color: white;
+    border-color: white;
+    transition: all 0.3s ease;
+}
+
+    .btn-outline-light:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+    }
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+    transition: all 0.3s ease;
+}
+
+    .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+        transform: translateY(-2px);
+    }
+
+.btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    transition: all 0.3s ease;
+}
+
+    .btn-info:hover {
+        background-color: #138496;
+        border-color: #117a8b;
+        transform: translateY(-2px);
+    }
+
+.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    transition: all 0.3s ease;
+}
+
+    .btn-warning:hover {
+        background-color: #e0a800;
+        border-color: #d39e00;
+        transform: translateY(-2px);
+    }
+
+.card {
+    border: none;
+    border-radius: 0.75rem;
+    transition: transform 0.2s ease-in-out;
+}
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+.feature-icon {
+    font-size: 3rem;
+    color: #007bff;
+}

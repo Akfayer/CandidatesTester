@@ -1,4 +1,4 @@
-﻿namespace Tester.Shared.DTOs.UserAswerDTOs;
+﻿namespace Tester.Shared.DTOs.UserAnswerDTOs;
 
 public class UpdateUserAnswerRequest
 {

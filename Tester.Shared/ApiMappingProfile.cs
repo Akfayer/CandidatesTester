@@ -6,7 +6,8 @@ using Tester.Shared.DTOs.UserAnswerDTOs;
 using Tester.Shared.DTOs.TestResultDTOs;
 using Tester.Core.Models;
 using Tester.Shared.DTOs.AuthDTOs;
-using Tester.Shared.DTOs.UserAswerDTOs;
+using Tester.Shared.DTOs.UserAnswerDTOs;
+using Tester.Shared.DTOs.UserDTOs;
 
 namespace Tester.Shared;
 
@@ -32,7 +33,13 @@ public class ApiMappingProfile : Profile
         CreateMap<CheckTestRequest, TestResultModel>().ReverseMap();
         CreateMap<TestResultResponse, TestResultModel>().ReverseMap();
 
+        CreateMap<UserModel, UserResponse>()
+            .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()))
+            .ReverseMap();
+        CreateMap<UserRequest, UserModel>().ReverseMap();
+
         CreateMap<RegisterRequest, UserModel>().ReverseMap();
         CreateMap<LoginRequest, LoginModel>().ReverseMap();
+
     }        
 }

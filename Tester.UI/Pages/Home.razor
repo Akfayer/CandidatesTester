@@ -1,7 +1,109 @@
 ﻿@page "/"
+@inject Tester.UI.Auth.AuthService AuthService
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="hero-section text-center py-5 mb-5">
+    <div class="container">
+        <h1 class="display-3 fw-bold text-white">Ласкаво просимо!</h1>
+        <p class="fs-4 text-white-50">
+            Ваш надійний помічник для проходження та створення тестів.
+        </p>
+        <div class="mt-4">
+            @if (IsAuthenticated)
+            {
+                @if (IsAdmin)
+                {
+                    <a href="/admin/tests" class="btn btn-info btn-lg me-3">
+                        <i class="bi bi-journal-text me-2"></i>Перегляд тестів
+                    </a>
+                    <a href="/admin/user-results" class="btn btn-warning btn-lg">
+                        <i class="bi bi-bar-chart-fill me-2"></i>Результати користувачів
+                    </a>
+                }
+                else
+                {
+                    <a href="/tests" class="btn btn-success btn-lg">
+                        <i class="bi bi-play-circle-fill me-2"></i>Перейти до тестів
+                    </a>
+                    <a href="/results" class="btn btn-success btn-lg">
+                        <i class="bi bi-bar-chart-fill me-2"></i>Переглянути результати
+                    </a>
+                }
+            }
+            else
+            {
+                <a href="/login" class="btn btn-primary btn-lg me-3">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Авторизація
+                </a>
+                <a href="/register" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-person-plus me-2"></i>Реєстрація
+                </a>
+            }
+        </div>
+    </div>
+</div>
 
-Welcome to your new app.
+<div class="container my-5">
+    <div class="row text-center">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="bi bi-patch-question-fill feature-icon mb-3"></i>
+                    <h5 class="card-title">Широкий вибір тестів</h5>
+                    <p class="card-text text-muted">Вивчайте нові теми та перевіряйте свої знання.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="bi bi-pencil-square feature-icon mb-3"></i>
+                    <h5 class="card-title">Створюйте власні тести</h5>
+                    <p class="card-text text-muted">Поділіться своїми знаннями з іншими користувачами.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="bi bi-graph-up feature-icon mb-3"></i>
+                    <h5 class="card-title">Відстежуйте прогрес</h5>
+                    <p class="card-text text-muted">Аналізуйте результати та покращуйте свої навички.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool IsAuthenticated { get; set; }
+    private bool IsAdmin { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthenticationState();
+        AuthService.OnAuthStateChanged += async () => await CheckAuthenticationState();
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= async () => await CheckAuthenticationState();
+    }
+
+    private async Task CheckAuthenticationState()
+    {
+        IsAuthenticated = await AuthService.IsAuthenticated();
+        if (IsAuthenticated)
+        {
+            var role = await AuthService.GetRole();
+            IsAdmin = (role == "Admin");
+        }
+        else
+        {
+            IsAdmin = false;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+}

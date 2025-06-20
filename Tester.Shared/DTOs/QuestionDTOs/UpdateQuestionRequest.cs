@@ -6,6 +6,8 @@ namespace Tester.Shared.DTOs.QuestionDTOs;
 public class UpdateQuestionRequest
 {
     [Required]
+    public int TestId { get; set; }
+    [Required]
     [MaxLength(500)]
     public string QuestionText { get; set; }
 

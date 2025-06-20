@@ -6,70 +6,115 @@
 @using Tester.Shared.DTOs
 @using Tester.Shared.DTOs.TestDTOs
 
-<h2>Tests Management</h2>
+<PageTitle>Управління Тестами</PageTitle>
 
-@if (!string.IsNullOrWhiteSpace(ErrorMessage))
-{
-    <div class="alert alert-danger">@ErrorMessage</div>
-}
+<div class="test-management-container container mt-4">
+    <h2 class="mb-4 text-center section-title">
+        <i class="bi bi-patch-question-fill section-icon"></i> Управління Тестами
+    </h2>
 
-@if (Tests is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Title</th>
-                <th>Description</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var test in Tests)
-            {
-                <tr>
-                    <td>
-                        <a href="@($"/tests/{test.TestId}/questions")">@test.TestTitle</a>
-                    </td>
-                    <td>@test.TestDescription</td>
-                    <td>
-                        <button class="btn btn-primary btn-sm" @onclick="() => EditTest(test.TestId)">Edit</button>
-                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteTest(test.TestId)">Delete</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
-<hr />
-
-<h3>@(EditingTestId == null ? "Create New Test" : "Edit Test")</h3>
-<EditForm Model="CurrentTest" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-
-    <div class="mb-3">
-        <label>Title:</label>
-        <InputText class="form-control" @bind-Value="CurrentTest.TestTitle" />
-    </div>
-
-    <div class="mb-3">
-        <label>Description:</label>
-        <InputText class="form-control" @bind-Value="CurrentTest.TestDescription" />
-    </div>
-
-    <button type="submit" class="btn btn-success">
-        @(EditingTestId == null ? "Create" : "Update")
-    </button>
-    @if (EditingTestId != null)
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
     {
-        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+        <div class="alert alert-danger fade show custom-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill alert-icon"></i> @ErrorMessage
+            <button type="button" class="btn-close" @onclick="ClearErrorMessage" aria-label="Close"></button>
+        </div>
     }
-</EditForm>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white card-header-custom">
+            <h4 class="mb-0">Список Тестів</h4>
+        </div>
+        <div class="card-body p-0">
+            @if (Tests is null)
+            {
+                <div class="loading-panel p-4 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Завантаження...</span>
+                    </div>
+                    <p class="mt-2"><em>Завантаження тестів...</em></p>
+                </div>
+            }
+            else if (!Tests.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    <p class="mb-0">Наразі немає створених тестів. Створіть перший тест!</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Назва Тесту</th>
+                                <th scope="col">Опис</th>
+                                <th scope="col" class="text-center">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var test in Tests)
+                            {
+                                <tr class="table-row-hover">
+                                    <td class="align-middle">
+                                        <a href="@($"/tests/{test.TestId}/questions")" class="test-title-link">
+                                            @test.TestTitle
+                                        </a>
+                                    </td>
+                                    <td class="align-middle">@test.TestDescription</td>
+                                    <td class="text-center align-middle">
+                                        <button class="btn btn-info btn-sm me-2 action-btn" @onclick="() => EditTest(test.TestId)" title="Редагувати">
+                                            <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Редагувати</span>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm action-btn" @onclick="() => DeleteTest(test.TestId)" title="Видалити">
+                                            <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Видалити</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-5">
+        <div class="card-header bg-success text-white card-header-custom">
+            <h4 class="mb-0">@(EditingTestId == null ? "Створити Новий Тест" : "Редагувати Тест")</h4>
+        </div>
+        <div class="card-body">
+            <EditForm Model="CurrentTest" OnValidSubmit="HandleValidSubmit" FormName="testForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-warning" />
+
+                <div class="mb-3">
+                    <label for="testTitle" class="form-label">Назва Тесту:</label>
+                    <InputText id="testTitle" class="form-control form-control-lg" @bind-Value="CurrentTest.TestTitle" placeholder="Введіть назву тесту" />
+                    <ValidationMessage For="@(() => CurrentTest.TestTitle)" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="testDescription" class="form-label">Опис Тесту:</label>
+                    <InputTextArea id="testDescription" class="form-control" @bind-Value="CurrentTest.TestDescription" rows="3" placeholder="Введіть опис тесту" />
+                    <ValidationMessage For="@(() => CurrentTest.TestDescription)" />
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    @if (EditingTestId != null)
+                    {
+                        <button type="button" class="btn btn-secondary me-2 cancel-btn" @onclick="CancelEdit">
+                            <i class="bi bi-x-circle"></i> Скасувати
+                        </button>
+                    }
+                    <button type="submit" class="btn btn-success submit-btn">
+                        <i class="bi @(EditingTestId == null ? "bi-plus-circle" : "bi-save")"></i> @(EditingTestId == null ? "Створити" : "Оновити")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
 
 @code {
     private List<TestResponse>? Tests;
@@ -84,72 +129,81 @@ else
 
     private async Task LoadTestsAsync()
     {
+        ErrorMessage = null;
         try
         {
             var response = await Http.GetFromJsonAsync<ApiResponse>("api/tests");
             if (response?.IsSuccess == true)
             {
-                var json = ((JsonElement)response.Result).GetRawText();
-                Tests = JsonSerializer.Deserialize<List<TestResponse>>(json);
+                var json = ((JsonElement)response.Result!).GetRawText();
+                Tests = JsonSerializer.Deserialize<List<TestResponse>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
             else
             {
-                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string> { "Unknown error" });
+                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string> { "Невідома помилка під час завантаження тестів." });
             }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            ErrorMessage = $"Помилка підключення до сервера: {httpEx.Message}";
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Failed to load tests: " + ex.Message;
+            ErrorMessage = "Не вдалося завантажити тести: " + ex.Message;
         }
     }
 
     private async Task HandleValidSubmit()
     {
+        ErrorMessage = null;
         try
         {
+            HttpResponseMessage response;
             if (EditingTestId == null)
             {
-                var response = await Http.PostAsJsonAsync("api/tests", CurrentTest);
-                if (response.IsSuccessStatusCode)
-                {
-                    await LoadTestsAsync();
-                    CurrentTest = new();
-                }
-                else
-                {
-                    ErrorMessage = $"Error: {response.StatusCode}";
-                }
+                response = await Http.PostAsJsonAsync("api/tests", CurrentTest);
             }
             else
             {
-                var response = await Http.PutAsJsonAsync($"api/tests/{EditingTestId}", CurrentTest);
-                if (response.IsSuccessStatusCode)
+                response = await Http.PutAsJsonAsync($"api/tests/{EditingTestId}", CurrentTest);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadTestsAsync();
+                CurrentTest = new();
+                EditingTestId = null;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                try
                 {
-                    await LoadTestsAsync();
-                    CurrentTest = new();
-                    EditingTestId = null;
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse>(errorContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    ErrorMessage = string.Join("; ", apiResponse?.ErrorMessages ?? new List<string> { $"Помилка: {response.StatusCode}. Невідома причина." });
                 }
-                else
+                catch (JsonException)
                 {
-                    ErrorMessage = $"Error: {response.StatusCode}";
+                    ErrorMessage = $"Помилка: {response.StatusCode}. Деталі: {errorContent}";
                 }
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Failed to save test: " + ex.Message;
+            ErrorMessage = "Не вдалося зберегти тест: " + ex.Message;
         }
     }
 
     private async Task EditTest(int id)
     {
+        ErrorMessage = null;
         try
         {
             var response = await Http.GetFromJsonAsync<ApiResponse>($"api/tests/{id}");
             if (response?.IsSuccess == true)
             {
-                var json = ((JsonElement)response.Result).GetRawText();
-                var test = JsonSerializer.Deserialize<TestResponse>(json);
+                var json = ((JsonElement)response.Result!).GetRawText();
+                var test = JsonSerializer.Deserialize<TestResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (test != null)
                 {
                     CurrentTest = new TestRequest
@@ -162,18 +216,19 @@ else
             }
             else
             {
-                ErrorMessage = "Failed to load test: " + string.Join("; ", response?.ErrorMessages ?? new List<string>());
+                ErrorMessage = "Не вдалося завантажити тест для редагування: " + string.Join("; ", response?.ErrorMessages ?? new List<string>());
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Error loading test: " + ex.Message;
+            ErrorMessage = "Помилка завантаження тесту: " + ex.Message;
         }
     }
 
     private async Task DeleteTest(int id)
     {
-        if (!await Confirm($"Are you sure you want to delete Test #{id}?")) return;
+        ErrorMessage = null;
+        if (!await Confirm($"Ви впевнені, що хочете видалити Тест #{id}?")) return;
 
         try
         {
@@ -184,12 +239,21 @@ else
             }
             else
             {
-                ErrorMessage = $"Failed to delete. Status code: {response.StatusCode}";
+                var errorContent = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse>(errorContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    ErrorMessage = string.Join("; ", apiResponse?.ErrorMessages ?? new List<string> { $"Помилка видалення: {response.StatusCode}. Невідома причина." });
+                }
+                catch (JsonException)
+                {
+                    ErrorMessage = $"Помилка видалення: {response.StatusCode}. Деталі: {errorContent}";
+                }
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Failed to delete test: " + ex.Message;
+            ErrorMessage = "Не вдалося видалити тест: " + ex.Message;
         }
     }
 
@@ -197,8 +261,13 @@ else
     {
         EditingTestId = null;
         CurrentTest = new();
+        ErrorMessage = null;
     }
 
+    private void ClearErrorMessage()
+    {
+        ErrorMessage = null;
+    }
 
     private async Task<bool> Confirm(string message)
     {

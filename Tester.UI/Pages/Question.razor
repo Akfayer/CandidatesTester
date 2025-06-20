@@ -1,81 +1,130 @@
 ﻿@page "/tests/{testId:int}/questions"
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 @using System.Net.Http.Json
 @using System.Text.Json
 @using Tester.Shared.DTOs
 @using Tester.Shared.Enums
 @using Tester.Shared.DTOs.QuestionDTOs
 
-<h2>Questions for Test #@testId</h2>
+<PageTitle>Запитання для Тесту #@testId</PageTitle>
 
-@if (!string.IsNullOrWhiteSpace(ErrorMessage))
-{
-    <div class="alert alert-danger">@ErrorMessage</div>
-}
+<div class="questions-management-container container mt-4">
+    <h2 class="mb-4 text-center section-title">
+        <i class="bi bi-question-circle-fill section-icon"></i> Запитання для Тесту #@testId
+    </h2>
 
-@if (Questions is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Текст</th>
-                <th>Тип</th>
-                <th>Дії</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var q in Questions)
-            {
-                <tr>
-                    <td>@q.QuestionText</td>
-                    <td>@q.TypeOfQuestion</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" @onclick="() => EditQuestion(q)">Edit</button>
-                        <NavLink class="btn btn-sm btn-info" href="@($"/questions/{q.QuestionId}/answers")">
-                            View Answers
-                        </NavLink>
-                    </td>                  
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
-<hr />
-
-<h3>@(Editing ? "Edit Question" : "Create New Question")</h3>
-
-<EditForm Model="CurrentForm" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-
-    <div class="mb-3">
-        <label>Question Text:</label>
-        <InputTextArea class="form-control" @bind-Value="CurrentForm.QuestionText" />
-    </div>
-
-    <div class="mb-3">
-        <label>Type:</label>
-        <InputSelect class="form-control" @bind-Value="CurrentForm.TypeOfQuestion">
-            @foreach (var type in Enum.GetValues<QuestionType>())
-            {
-                <option value="@type">@type</option>
-            }
-        </InputSelect>
-    </div>
-
-    <button type="submit" class="btn btn-success">
-        @(Editing ? "Update" : "Create")
-    </button>
-    @if (Editing)
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
     {
-        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+        <div class="alert alert-danger fade show custom-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill alert-icon"></i> @ErrorMessage
+            <button type="button" class="btn-close" @onclick="ClearErrorMessage" aria-label="Close"></button>
+        </div>
     }
-</EditForm>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white card-header-custom">
+            <h4 class="mb-0">Список Запитань</h4>
+        </div>
+        <div class="card-body p-0">
+            @if (Questions is null)
+            {
+                <div class="loading-panel p-4 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Завантаження...</span>
+                    </div>
+                    <p class="mt-2"><em>Завантаження запитань...</em></p>
+                </div>
+            }
+            else if (!Questions.Any())
+            {
+                <div class="p-4 text-center text-muted empty-state">
+                    <i class="bi bi-info-circle-fill info-icon-small"></i>
+                    <p class="mb-0">Наразі немає запитань для цього тесту. Додайте перше запитання!</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 questions-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="question-text-col">Текст Запитання</th>
+                                <th scope="col" class="question-type-col">Тип</th>
+                                <th scope="col" class="text-center actions-col">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var q in Questions)
+                            {
+                                <tr class="table-row-hover">
+                                    <td class="align-middle question-text-cell">@q.QuestionText</td>
+                                    <td class="align-middle question-type-cell">
+                                        <span class="badge @GetTypeBadgeClass((Tester.Shared.Enums.QuestionType)q.TypeOfQuestion)">@q.TypeOfQuestion.ToString()</span>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <button class="btn btn-info btn-sm me-2 action-btn" @onclick="() => EditQuestion(q)" title="Редагувати запитання">
+                                            <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Редагувати</span>
+                                        </button>
+                                        <NavLink class="btn btn-success btn-sm me-2 action-btn" href="@($"/questions/{q.QuestionId}/answers")" title="Переглянути відповіді">
+                                            <i class="bi bi-card-checklist"></i> <span class="d-none d-md-inline">Відповіді</span>
+                                        </NavLink>
+                                        <button class="btn btn-danger btn-sm action-btn" @onclick="() => DeleteQuestion(q.QuestionId)" title="Видалити запитання">
+                                            <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Видалити</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-5">
+        <div class="card-header bg-success text-white card-header-custom">
+            <h4 class="mb-0">@(Editing ? "Редагувати Запитання" : "Створити Нове Запитання")</h4>
+        </div>
+        <div class="card-body">
+            <EditForm Model="CurrentForm" OnValidSubmit="HandleValidSubmit" FormName="questionForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-warning" />
+
+                <div class="mb-3">
+                    <label for="questionText" class="form-label">Текст Запитання:</label>
+                    <InputTextArea id="questionText" class="form-control form-control-textarea" @bind-Value="CurrentForm.QuestionText" rows="3" placeholder="Введіть текст запитання" />
+                    <ValidationMessage For="@(() => CurrentForm.QuestionText)" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="questionType" class="form-label">Тип Запитання:</label>
+                    <InputSelect id="questionType" class="form-select form-control" @bind-Value="CurrentForm.TypeOfQuestion">
+                        <option value="">Оберіть тип запитання</option> @* Placeholder option *@
+                        @foreach (var type in Enum.GetValues<QuestionType>())
+                        {
+                            <option value="@type">@GetQuestionTypeName(type)</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => CurrentForm.TypeOfQuestion)" class="text-danger" />
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    @if (Editing)
+                    {
+                        <button type="button" class="btn btn-secondary me-2 cancel-btn" @onclick="CancelEdit">
+                            <i class="bi bi-x-circle"></i> Скасувати
+                        </button>
+                    }
+                    <button type="submit" class="btn btn-success submit-btn">
+                        <i class="bi @(Editing ? "bi-save" : "bi-plus-circle")"></i> @(Editing ? "Оновити" : "Створити")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
 
 @code {
     [Parameter]
@@ -96,82 +145,155 @@ else
 
     private async Task LoadQuestions()
     {
+        ErrorMessage = null; 
         try
         {
             var response = await Http.GetFromJsonAsync<ApiResponse>($"api/questions/test/{testId}");
             if (response?.IsSuccess == true)
             {
-                var raw = ((JsonElement)response.Result).GetRawText();
-                Questions = JsonSerializer.Deserialize<List<QuestionResponse>>(raw);
+                var raw = ((JsonElement)response.Result!).GetRawText();
+                Questions = JsonSerializer.Deserialize<List<QuestionResponse>>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
             else
             {
-                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string>());
+                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string> { "Невідома помилка під час завантаження запитань." });
             }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            ErrorMessage = $"Помилка підключення до сервера: {httpEx.Message}";
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Failed to load questions: " + ex.Message;
+            ErrorMessage = "Не вдалося завантажити запитання: " + ex.Message;
         }
     }
 
     private async Task HandleValidSubmit()
     {
+        ErrorMessage = null; 
         try
         {
+            HttpResponseMessage response;
             if (!Editing)
             {
-                var response = await Http.PostAsJsonAsync("api/questions", CurrentForm);
-                if (response.IsSuccessStatusCode)
-                {
-                    await LoadQuestions();
-                    CurrentForm = new CreateQuestionRequest { TestId = testId };
-                }
-                else
-                {
-                    ErrorMessage = $"Failed to create. Status code: {response.StatusCode}";
-                }
+                response = await Http.PostAsJsonAsync("api/questions", CurrentForm);
             }
             else
             {
                 var updateDto = new UpdateQuestionRequest
-                {
-                    QuestionText = CurrentForm.QuestionText,
-                    TypeOfQuestion = CurrentForm.TypeOfQuestion
-                };
+                    {
+                        TestId = CurrentForm.TestId,
+                        QuestionText = CurrentForm.QuestionText,
+                        TypeOfQuestion = CurrentForm.TypeOfQuestion
+                    };
+                response = await Http.PutAsJsonAsync($"api/questions/{EditingQuestionId}", updateDto);
+            }
 
-                var response = await Http.PutAsJsonAsync("api/questions/update", updateDto);
-                if (response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadQuestions();
+                CurrentForm = new CreateQuestionRequest { TestId = testId };
+                Editing = false;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                try
                 {
-                    await LoadQuestions();
-                    CurrentForm = new CreateQuestionRequest { TestId = testId };
-                    Editing = false;
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse>(errorContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    ErrorMessage = string.Join("; ", apiResponse?.ErrorMessages ?? new List<string> { $"Помилка: {response.StatusCode}. Невідома причина." });
                 }
-                else
+                catch (JsonException)
                 {
-                    ErrorMessage = $"Failed to update. Status code: {response.StatusCode}";
+                    ErrorMessage = $"Помилка: {response.StatusCode}. Деталі: {errorContent}";
                 }
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Error submitting form: " + ex.Message;
+            ErrorMessage = "Помилка відправки форми: " + ex.Message;
         }
     }
 
-    private void EditQuestion(QuestionResponse q)
+    private async Task EditQuestion(QuestionResponse q)
     {
+        ErrorMessage = null; 
         CurrentForm.QuestionText = q.QuestionText;
         CurrentForm.TypeOfQuestion = q.TypeOfQuestion;
-        CurrentForm.TestId = q.TestId;
-
+        CurrentForm.TestId = q.TestId; // Важливо зберегти TestId для форми
         Editing = true;
         EditingQuestionId = q.QuestionId;
+    }
+
+    private async Task DeleteQuestion(int questionId)
+    {
+        ErrorMessage = null; 
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Ви впевнені, що хочете видалити запитання #{questionId}?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/questions/{questionId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadQuestions();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse>(errorContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    ErrorMessage = string.Join("; ", apiResponse?.ErrorMessages ?? new List<string> { $"Помилка видалення: {response.StatusCode}. Невідома причина." });
+                }
+                catch (JsonException)
+                {
+                    ErrorMessage = $"Помилка видалення: {response.StatusCode}. Деталі: {errorContent}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Не вдалося видалити запитання: " + ex.Message;
+        }
     }
 
     private void CancelEdit()
     {
         Editing = false;
         CurrentForm = new CreateQuestionRequest { TestId = testId };
+        ErrorMessage = null; 
+    }
+
+    private void ClearErrorMessage()
+    {
+        ErrorMessage = null;
+    }
+
+    // Допоміжна функція для отримання назви типу запитання (можна розширити для i18n)
+    private string GetQuestionTypeName(QuestionType type)
+    {
+        return type switch
+        {
+            QuestionType.SingleChoice => "Один варіант",
+            QuestionType.MultipleChoice => "Кілька варіантів",
+            QuestionType.OpenText => "Відкрита відповідь",
+            _ => type.ToString()
+        };
+    }
+
+    // Допоміжна функція для стилізації бейджів типу запитання
+    private string GetTypeBadgeClass(QuestionType type)
+    {
+        return type switch
+        {
+            QuestionType.SingleChoice => "bg-primary",
+            QuestionType.MultipleChoice => "bg-info text-dark",
+            QuestionType.OpenText => "bg-secondary",
+            _ => "bg-light text-dark"
+        };
     }
 }

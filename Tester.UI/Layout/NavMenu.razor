@@ -1,105 +1,113 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
-@inject Tester.UI.Auth.AuthService AuthService // Інжектуємо ваш AuthService
-@inject NavigationManager Navigation // Для перенаправлення після виходу
-@inject IJSRuntime JS // Для викликів JavaScript, якщо потрібно для Logout
+@inject Tester.UI.Auth.AuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<div class="top-row ps-3 navbar navbar-dark">
-
+<div class="top-row ps-3 navbar navbar-expand-md navbar-dark custom-navbar">
     <div class="container-fluid">
-
-        <a class="navbar-brand" href="">Tester.UI</a>
-
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-
+        <a class="navbar-brand brand-text" href="">Tester App</a>
+        <button title="Navigation menu" class="navbar-toggler">
             <span class="navbar-toggler-icon"></span>
-
         </button>
-
     </div>
-
 </div>
 
-
-
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
+<div class="@NavMenuCssClass nav-scrollable custom-nav-scrollable">
+    <nav class="flex-column custom-nav">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <span class="nav-text-home">Home</span>
             </NavLink>
         </div>
 
-        <AuthorizeView>
-            <Authorized>
-                @* Додаємо посилання, які бачать всі автентифіковані користувачі (крім адмінів, якщо у адмінів є окремі, специфічніші посилання) *@
+        @if (IsAuthenticated)
+        {
+            @if (IsAdmin)
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/tests">
+                        <span class="bi bi-journal-text" aria-hidden="true"></span> <span class="nav-text">Керування тестами</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/user-results">
+                        <span class="bi bi-people" aria-hidden="true"></span> <span class="nav-text">Результати користувачів</span>
+                    </NavLink>
+                </div>
+            }
+            else // Звичайний авторизований користувач
+            {
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="tests">
-                        <span class="bi bi-patch-question" aria-hidden="true"></span> Тести
-                    </NavLink>
-                </div>
-
-            </Authorized>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="Admin">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/dashboard">
-                        <span class="bi bi-grid-fill" aria-hidden="true"></span> Панель Адміністратора
+                        <span class="bi bi-patch-question" aria-hidden="true"></span> <span class="nav-text">Пройти тест</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/users">
-                        <span class="bi bi-people-fill" aria-hidden="true"></span> Користувачі
+                    <NavLink class="nav-link" href="results">
+                        <span class="bi bi-bar-chart-fill" aria-hidden="true"></span> <span class="nav-text">Мої результати</span>
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/questions">
-                        <span class="bi bi-question-circle-fill" aria-hidden="true"></span> Питання (Адмін)
-                    </NavLink>
-                </div>
-                @* Якщо потрібно, можна додати окрему кнопку "Вийти" для адмінів, або залишити спільну зверху *@
-            </Authorized>
-        </AuthorizeView>
-
-        <AuthorizeView>
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/login">
-                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Login
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/register">
-                        <span class="bi bi-person-plus" aria-hidden="true"></span> Register
-                    </NavLink>
-                </div>
-            </NotAuthorized>
-        </AuthorizeView>
+            }
+            <div class="nav-item px-3 logout-button">
+                <button class="nav-link btn btn-link" @onclick="HandleLogout">
+                    <span class="bi bi-box-arrow-right" aria-hidden="true"></span> <span class="nav-text">Вийти</span>
+                </button>
+            </div>
+        }
+        else // Неавторизований користувач
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/login">
+                    <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> <span class="nav-text">Авторизація</span>
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/register">
+                    <span class="bi bi-person-plus" aria-hidden="true"></span> <span class="nav-text">Реєстрація</span>
+                </NavLink>
+            </div>
+        }
     </nav>
 </div>
 
-
-
 @code {
-
-    private bool collapseNavMenu = true;
-
+    private bool collapseNavMenu = false;
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    private void ToggleNavMenu()
+    private bool IsAuthenticated { get; set; }
+    private bool IsAdmin { get; set; }
+
+    protected override async Task OnInitializedAsync()
     {
-        collapseNavMenu = !collapseNavMenu;
+        await CheckAuthenticationState();
+        AuthService.OnAuthStateChanged += async () => await CheckAuthenticationState();
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= async () => await CheckAuthenticationState();
+    }
+
+
+    private async Task CheckAuthenticationState()
+    {
+        IsAuthenticated = await AuthService.IsAuthenticated();
+        if (IsAuthenticated)
+        {
+            var role = await AuthService.GetRole();
+            IsAdmin = (role == "Admin");
+        }
+        else
+        {
+            IsAdmin = false;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.Logout();
+        Navigation.NavigateTo("/"); // Перенаправлення на домашню сторінку після виходу
     }
 }

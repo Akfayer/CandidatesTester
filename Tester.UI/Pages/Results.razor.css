@@ -1,0 +1,233 @@
+﻿
+.results-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.section-title {
+    color: #343a40;
+    font-weight: 700;
+    font-size: 2.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.section-icon {
+    font-size: 2.5rem;
+    margin-right: 15px;
+    color: #fd7e14; 
+}
+
+
+.custom-alert {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+.alert-icon {
+    font-size: 1.2rem;
+    margin-right: 10px;
+}
+
+.custom-alert .btn-close {
+    margin-left: auto;
+}
+
+
+.login-prompt, .empty-state {
+    padding: 20px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-top: 30px;
+    background-color: #e2f2fe; 
+    color: #0d6efd; 
+    border-color: #bee5eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.login-prompt-icon, .info-icon-small {
+    font-size: 2.5rem;
+    margin-right: 15px;
+    color: #0d6efd; 
+}
+
+.login-prompt .alert-link, .empty-state .alert-link {
+    font-weight: 600;
+    color: #0d6efd;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+    .login-prompt .alert-link:hover, .empty-state .alert-link:hover {
+        color: #0a58ca;
+    }
+
+
+
+.result-card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 30px;
+}
+
+.card-header-custom {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 12px 12px 0 0 !important;
+    font-weight: 600;
+}
+
+
+.results-table {
+    margin-bottom: 0;
+}
+
+    .results-table th, .results-table td {
+        vertical-align: middle;
+        padding: 1rem 1.2rem;
+        font-size: 0.95rem;
+    }
+
+    .results-table thead th {
+        font-weight: 600;
+        color: #495057;
+    }
+
+.test-title-col {
+    width: 45%;
+}
+
+.score-col {
+    width: 20%;
+}
+
+.date-col {
+    width: 25%;
+}
+
+.details-col {
+    width: 10%;
+}
+
+.test-title-cell {
+    font-weight: 500;
+}
+
+
+.badge {
+    padding: 0.6em 0.9em;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.95em;
+    min-width: 65px; 
+    display: inline-block;
+    text-align: center;
+}
+
+    .badge.bg-success {
+        background-color: #28a745 !important;
+    }
+
+    .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #343a40 !important;
+    }
+
+    .badge.bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .badge.bg-secondary {
+        background-color: #6c757d !important;
+    }
+
+
+
+.view-details-btn {
+    font-weight: 600;
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .view-details-btn i {
+        margin-right: 6px;
+        font-size: 1rem;
+    }
+
+    .view-details-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 123, 255, 0.12);
+    }
+
+
+.loading-panel {
+    background-color: #e9ecef;
+    border-radius: 12px;
+    padding: 40px;
+    margin-top: 30px;
+}
+
+.spinner-border {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-width: 0.4em;
+}
+
+
+
+
+
+@media (max-width: 768px) {
+    .results-container {
+        padding: 15px;
+    }
+
+    .section-title {
+        font-size: 1.8rem;
+    }
+
+    .section-icon {
+        font-size: 2.2rem;
+        margin-right: 10px;
+    }
+
+    .results-table th, .results-table td {
+        padding: 0.8rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .d-none.d-md-inline { 
+        display: none !important;
+    }
+
+    .view-details-btn {
+        padding: 0.4rem 0.6rem;
+    }
+
+        .view-details-btn i {
+            margin-right: 0;
+        }
+
+    .test-title-col, .score-col, .date-col, .details-col {
+        width: auto;
+    }
+}

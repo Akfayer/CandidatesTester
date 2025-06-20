@@ -7,5 +7,6 @@ public interface IQuestionService
 {
     Task CreateQuestionAsync(QuestionModel question);
     Task<List<QuestionModel>> GetQuestionsByTestIdAsync(int testId);
-    Task ChangeQuestionTypeAsync(QuestionModel questionModel);
+    Task UpdateQuestionAsync(QuestionModel questionModel);
+    Task DeleteQuestionAsync(int questionId);
 }

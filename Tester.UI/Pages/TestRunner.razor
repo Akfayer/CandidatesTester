@@ -5,60 +5,131 @@
 @using Tester.Shared.DTOs
 @using Tester.Shared.DTOs.QuestionDTOs
 @using Tester.Shared.DTOs.AnswerOptionDTOs
-@using Tester.Shared.DTOs.UserAnswerDTOs
 @using Tester.Shared.DTOs.TestResultDTOs
+@using Tester.Shared.DTOs.UserAnswerDTOs
+@using Tester.Shared.Enums
 @using System.Text.Json
+@implements IDisposable // Додаємо implements IDisposable для коректного вивільнення Timer
 
-<h3 class="mb-3">Test Progress</h3>
+<PageTitle>Тест</PageTitle>
 
-@if (Questions == null || AnswerMap == null)
-{
-    <p><em>Loading test...</em></p>
-}
-else
-{
-    <div class="mb-3">
-        <strong>Time Left: </strong> @FormattedTime
-    </div>
+<div class="test-container container my-4 p-4">
+    <h2 class="text-center mb-4 test-title">
+        <i class="bi bi-journal-check me-2"></i> Проходження Тесту
+    </h2>
 
-    <div class="mb-3 d-flex flex-wrap gap-2">
-        @for (int i = 0; i < Questions.Count; i++)
-        {
-            int index = i;
-            <button class="btn @(index == CurrentQuestionIndex ? "btn-primary" : "btn-outline-primary")"
-            @onclick="@(() => SelectQuestion(index))"
-            disabled="@IsSubmitted">
-                @(index + 1)
-            </button>
-        }
-    </div>
-
-    @if (CurrentQuestion != null)
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
     {
-        <div class="mb-3">
-            <h5>@CurrentQuestion.QuestionText</h5>
-            <div class="list-group">
-                @foreach (var option in AnswerMap[CurrentQuestion.QuestionId])
-                {
-                    <label class="list-group-item">
-                        <input type="radio" name="answer"
-                        value="@option.AnswerOptionId"
-                        @onchange="() => SelectAnswer(option.AnswerOptionId)"
-                        checked="@IsOptionSelected(CurrentQuestion.QuestionId, option.AnswerOptionId)"
-                        disabled="@IsSubmitted" />
-                        @option.AnswerText
-                    </label>
-                }
-            </div>
-
-            <div class="mt-3">
-                <button class="btn btn-secondary" @onclick="SubmitAnswer" disabled="@IsSubmitted">Submit Answer</button>
-            </div>
+        <div class="alert alert-danger fade show custom-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill alert-icon"></i> @ErrorMessage
+            <button type="button" class="btn-close" @onclick="ClearErrorMessage" aria-label="Close"></button>
         </div>
     }
 
-    <button class="btn btn-success mt-4" @onclick="SubmitTest" disabled="@IsSubmitted">Submit Entire Test</button>
-}
+    @if (IsLoading)
+    {
+        <div class="loading-panel p-4 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Завантаження...</span>
+            </div>
+            <p class="mt-2"><em>Завантаження тесту... Будь ласка, зачекайте.</em></p>
+        </div>
+    }
+    else if (Questions == null || Questions.Count == 0 || AnswerMap == null)
+    {
+        <div class="alert alert-info text-center empty-state" role="alert">
+            <i class="bi bi-info-circle-fill info-icon-small"></i>
+            <p class="mb-0">На жаль, не вдалося завантажити запитання для цього тесту, або тест порожній.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm test-card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center test-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-hourglass-split me-2"></i> Залишилось часу: <span class="time-left-display">@FormattedTime</span>
+                </h5>
+                <span class="question-counter">Запитання @(CurrentQuestionIndex + 1) з @Questions.Count</span>
+            </div>
+            <div class="card-body">
+                <div class="question-navigation mb-4 d-flex flex-wrap justify-content-center gap-2">
+                    @for (int i = 0; i < Questions.Count; i++)
+                    {
+                        int index = i;
+                        var questionId = Questions[index].QuestionId;
+                        var buttonClass = index == CurrentQuestionIndex ? "btn-question-nav active" : "btn-question-nav";
+                        var buttonBgClass = SelectedAnswers.ContainsKey(questionId) && SelectedAnswers[questionId].Any() ? "btn-question-answered" : "";
+
+                        <button class="btn @buttonClass @buttonBgClass"
+                                @onclick="@(() => SelectQuestion(index))"
+                                disabled="@IsSubmitted"
+                                title="@(SelectedAnswers.ContainsKey(questionId) && SelectedAnswers[questionId].Any() ? "Запитання відповідено" : "Запитання не відповідено")">
+                            @(index + 1)
+                            @if (SelectedAnswers.ContainsKey(questionId) && SelectedAnswers[questionId].Any())
+                            {
+                                <i class="bi bi-check-circle-fill ms-1 question-answered-icon"></i>
+                            }
+                        </button>
+                    }
+                </div>
+
+                @if (CurrentQuestion != null)
+                {
+                    <div class="current-question-section mb-4 p-3 border rounded bg-light">
+                        <h4 class="mb-3 question-text">
+                            <span class="badge bg-secondary me-2">Запитання @(CurrentQuestionIndex + 1)</span> @CurrentQuestion.QuestionText
+                        </h4>
+                        <div class="list-group question-options">
+                            @foreach (var option in AnswerMap[CurrentQuestion.QuestionId])
+                            {
+                                // Використовуємо input type="radio" для одиночного вибору
+                                @if ((Tester.Shared.Enums.QuestionType)CurrentQuestion.TypeOfQuestion == QuestionType.SingleChoice)
+                                {
+                                    <label class="list-group-item list-group-item-action @(IsOptionSelected(CurrentQuestion.QuestionId, option.AnswerOptionId) ? "active" : "")">
+                                        <input type="radio" name="answer-@(CurrentQuestion.QuestionId)"
+                                               value="@option.AnswerOptionId"
+                                               @onchange="() => SelectAnswer(CurrentQuestion.QuestionId, option.AnswerOptionId, isCheckbox: false)"
+                                               checked="@IsOptionSelected(CurrentQuestion.QuestionId, option.AnswerOptionId)"
+                                               disabled="@IsSubmitted"
+                                               class="form-check-input me-2" />
+                                        @option.AnswerText
+                                    </label>
+                                }
+                                // Використовуємо input type="checkbox" для множинного вибору
+                                else if ((Tester.Shared.Enums.QuestionType)CurrentQuestion.TypeOfQuestion == QuestionType.MultipleChoice)
+                                {
+                                    <label class="list-group-item list-group-item-action @(IsOptionSelected(CurrentQuestion.QuestionId, option.AnswerOptionId) ? "active" : "")">
+                                        <input type="checkbox" name="answer-@(CurrentQuestion.QuestionId)"
+                                               value="@option.AnswerOptionId"
+                                               @onchange="e => SelectAnswer(CurrentQuestion.QuestionId, option.AnswerOptionId, isCheckbox: true, isChecked: (bool)e.Value)"
+                                               checked="@IsOptionSelected(CurrentQuestion.QuestionId, option.AnswerOptionId)"
+                                               disabled="@IsSubmitted"
+                                               class="form-check-input me-2" />
+                                        @option.AnswerText
+                                    </label>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <button class="btn btn-outline-secondary action-btn" @onclick="PrevQuestion">
+                        <i class="bi bi-arrow-left-circle me-2"></i> Попереднє
+                    </button>
+                    <button class="btn btn-outline-primary action-btn" @onclick="NextQuestion">
+                        Наступне <i class="bi bi-arrow-right-circle ms-2"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-center p-3 test-footer">
+                <button class="btn btn-success submit-test-btn" @onclick="SubmitTest" disabled="@IsSubmitted">
+                    <i class="bi bi-send-fill me-2"></i> Завершити Тест
+                </button>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter]
@@ -66,37 +137,103 @@ else
 
     private List<QuestionResponse>? Questions;
     private Dictionary<int, List<AnswerOptionResponse>>? AnswerMap;
-    private Dictionary<int, int> SelectedAnswers = new();
+    // Змінено з Dictionary<int, int> на Dictionary<int, List<int>> для підтримки множинного вибору
+    private Dictionary<int, List<int>> SelectedAnswers = new(); // Stores QuestionId -> List of SelectedAnswerOptionIds
     private QuestionResponse? CurrentQuestion;
     private int CurrentQuestionIndex = 0;
 
+    private bool IsLoading = true;
     private bool IsSubmitted = false;
-    private int RemainingSeconds = 300;
+    private string? ErrorMessage;
+
+    private int RemainingSeconds = 1800; // Default to 30 minutes (1800 seconds)
     private string FormattedTime => $"{RemainingSeconds / 60:D2}:{RemainingSeconds % 60:D2}";
     private System.Timers.Timer? Timer;
 
+    public void Dispose()
+    {
+        Timer?.Dispose();
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadQuestionsAndAnswers();
-        StartTimer();
+        ErrorMessage = null;
+        try
+        {
+            await LoadQuestionsAndAnswers();
+            if (Questions != null && Questions.Any())
+            {
+                // Завантаження тривалості тесту, якщо є API для цього
+                // var testDurationResp = await Http.GetFromJsonAsync<ApiResponse>($"api/tests/{testId}/duration");
+                // if (testDurationResp?.IsSuccess == true && testDurationResp.Result is JsonElement durationJson)
+                // {
+                //     var durationMinutes = JsonSerializer.Deserialize<int>(durationJson.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                //     RemainingSeconds = durationMinutes * 60;
+                // }
+                StartTimer();
+            }
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            ErrorMessage = "Тест не знайдено. Можливо, він був видалений або ідентифікатор невірний.";
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized || ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            ErrorMessage = "У вас немає прав доступу до цього тесту. Будь ласка, авторизуйтесь.";
+            // Можливо, перенаправити на сторінку входу
+            // Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Помилка при завантаженні тесту: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task LoadQuestionsAndAnswers()
     {
+        Questions = new List<QuestionResponse>();
+        AnswerMap = new Dictionary<int, List<AnswerOptionResponse>>();
+
+        // Fetch questions
         var questionResp = await Http.GetFromJsonAsync<ApiResponse>($"api/questions/test/{testId}");
-        var qJson = ((JsonElement)questionResp.Result).GetRawText();
-        Questions = JsonSerializer.Deserialize<List<QuestionResponse>>(qJson);
+        if (questionResp?.IsSuccess == true && questionResp.Result is JsonElement qJsonElement)
+        {
+            Questions = JsonSerializer.Deserialize<List<QuestionResponse>>(qJsonElement.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        else
+        {
+            ErrorMessage = "Не вдалося завантажити запитання тесту.";
+            return;
+        }
 
-        AnswerMap = new();
+        if (Questions == null || !Questions.Any())
+        {
+            ErrorMessage = "Цей тест не містить запитань.";
+            return;
+        }
 
+        // Fetch answer options for each question
         foreach (var q in Questions)
         {
             var answerResp = await Http.GetFromJsonAsync<ApiResponse>($"api/answer_options/question/{q.QuestionId}");
-            var aJson = ((JsonElement)answerResp.Result).GetRawText();
-            var options = JsonSerializer.Deserialize<List<AnswerOptionResponse>>(aJson);
-            AnswerMap[q.QuestionId] = options;
+            if (answerResp?.IsSuccess == true && answerResp.Result is JsonElement aJsonElement)
+            {
+                var options = JsonSerializer.Deserialize<List<AnswerOptionResponse>>(aJsonElement.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                AnswerMap[q.QuestionId] = options ?? new List<AnswerOptionResponse>();
+                SelectedAnswers[q.QuestionId] = new List<int>(); // Ініціалізуємо порожній список для відповідей
+            }
+            else
+            {
+                AnswerMap[q.QuestionId] = new List<AnswerOptionResponse>();
+                SelectedAnswers[q.QuestionId] = new List<int>();
+            }
         }
 
+        // Initialize CurrentQuestion
         if (Questions.Count > 0)
         {
             CurrentQuestion = Questions[0];
@@ -106,58 +243,83 @@ else
 
     private void SelectQuestion(int index)
     {
+        if (IsSubmitted) return; // Prevent changing question if test is submitted
+
         if (index >= 0 && index < Questions?.Count)
         {
             CurrentQuestionIndex = index;
             CurrentQuestion = Questions[CurrentQuestionIndex];
+            StateHasChanged(); // Force UI update
         }
     }
 
-    private void SelectAnswer(int answerOptionId)
+    private void NextQuestion()
     {
-        if (CurrentQuestion != null)
+        if (CurrentQuestionIndex < Questions!.Count - 1)
         {
-            SelectedAnswers[CurrentQuestion.QuestionId] = answerOptionId;
+            SelectQuestion(CurrentQuestionIndex + 1);
         }
     }
 
+    private void PrevQuestion()
+    {
+        if (CurrentQuestionIndex > 0)
+        {
+            SelectQuestion(CurrentQuestionIndex - 1);
+        }
+    }
+
+    // Оновлена логіка вибору відповіді для підтримки обох типів питань
+    private void SelectAnswer(int questionId, int answerOptionId, bool isCheckbox, bool isChecked = false)
+    {
+        if (IsSubmitted) return;
+
+        if (!SelectedAnswers.ContainsKey(questionId))
+        {
+            SelectedAnswers[questionId] = new List<int>();
+        }
+
+        if (isCheckbox)
+        {
+            if (isChecked)
+            {
+                if (!SelectedAnswers[questionId].Contains(answerOptionId))
+                {
+                    SelectedAnswers[questionId].Add(answerOptionId);
+                }
+            }
+            else
+            {
+                SelectedAnswers[questionId].Remove(answerOptionId);
+            }
+        }
+        else // Radio button (SingleChoice)
+        {
+            SelectedAnswers[questionId].Clear(); // Clear previous selection
+            SelectedAnswers[questionId].Add(answerOptionId);
+        }
+        StateHasChanged(); // Force UI update to show selected state
+    }
+
+    // Оновлена логіка перевірки вибраної опції
     private bool IsOptionSelected(int questionId, int optionId)
     {
-        return SelectedAnswers.ContainsKey(questionId) && SelectedAnswers[questionId] == optionId;
-    }
-
-    private async Task SubmitAnswer()
-    {
-        if (CurrentQuestion == null || !SelectedAnswers.ContainsKey(CurrentQuestion.QuestionId)) return;
-
-        var userId = await GetCurrentUserId();
-
-        var dto = new SubmitUserAnswerRequest
-            {
-                QuestionId = CurrentQuestion.QuestionId,
-                AnswerOptionId = SelectedAnswers[CurrentQuestion.QuestionId],
-                UserId = userId
-            };
-
-        var result = await Http.PostAsJsonAsync("api/user_answers", dto);
-        if (!result.IsSuccessStatusCode)
-        {
-            await JS.InvokeVoidAsync("alert", "Failed to submit answer.");
-        }
+        return SelectedAnswers.ContainsKey(questionId) && SelectedAnswers[questionId].Contains(optionId);
     }
 
     private void StartTimer()
     {
         Timer = new System.Timers.Timer(1000);
-        Timer.Elapsed += (s, e) =>
+        Timer.Elapsed += async (s, e) =>
         {
             RemainingSeconds--;
-            InvokeAsync(StateHasChanged);
+            await InvokeAsync(StateHasChanged); // Update UI on the main thread
 
-            if (RemainingSeconds <= 0)
+            if (RemainingSeconds <= 0 && !IsSubmitted)
             {
-                Timer.Stop();
-                InvokeAsync(SubmitTest);
+                Timer?.Stop();
+                await InvokeAsync(SubmitTest); // Automatically submit test when time runs out
+                await JS.InvokeVoidAsync("alert", "Час вийшов! Тест автоматично завершено.");
             }
         };
         Timer.Start();
@@ -167,48 +329,92 @@ else
     {
         if (IsSubmitted) return;
         IsSubmitted = true;
-        Timer?.Stop();
+        Timer?.Stop(); // Stop timer immediately upon submission
 
-        var userId = await GetCurrentUserId();
+        try
+        {
+            var userId = await GetCurrentUserId();
+            if (userId == 0)
+            {
+                await JS.InvokeVoidAsync("alert", "Не вдалося отримати ідентифікатор користувача. Будь ласка, авторизуйтесь знову.");
+                Navigation.NavigateTo("/login", forceLoad: true);
+                return;
+            }
 
-        var answerList = SelectedAnswers
-            .Select(kvp => new SubmitUserAnswerRequest
+            foreach (var kvp in SelectedAnswers)
+            {
+                int questionId = kvp.Key;
+                List<int> selectedOptionIds = kvp.Value;
+
+                foreach (int optionId in selectedOptionIds)
                 {
-                    UserId = userId,
-                    QuestionId = kvp.Key,
-                    AnswerOptionId = kvp.Value
-                })
-            .ToList();
+                    var userAnswerDto = new SubmitUserAnswerRequest
+                        {
+                            UserId = userId,
+                            QuestionId = questionId,
+                            AnswerOptionId = optionId
+                        };
 
-        var checkRequest = new
-        {
-            UserId = userId,
-            TestId = testId,
-            Answers = answerList
-        };
+                    var saveResponse = await Http.PostAsJsonAsync("api/user_answers", userAnswerDto);
 
-        var response = await Http.PostAsJsonAsync("api/results/check", checkRequest);
+                    if (!saveResponse.IsSuccessStatusCode)
+                    {
+                        var errorContent = await saveResponse.Content.ReadAsStringAsync();
+                        Console.WriteLine($"Помилка при збереженні відповіді для питання {questionId}: {errorContent}");
+                    }
+                }
+            }
 
-        if (!response.IsSuccessStatusCode)
-        {
-            await JS.InvokeVoidAsync("alert", "Test submitted, but result could not be processed.");
-            Navigation.NavigateTo("/");
-            return;
+            var checkRequest = new
+            {
+                UserId = userId,
+                TestId = testId,
+                Answers = SelectedAnswers.SelectMany(kvp => kvp.Value.Select(optionId => new SubmitUserAnswerRequest { QuestionId = kvp.Key, AnswerOptionId = optionId }))
+            };
+
+            var response = await Http.PostAsJsonAsync("api/results/check", checkRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Помилка при обробці результатів тесту: {response.ReasonPhrase}. Деталі: {errorContent}");
+                Navigation.NavigateTo("/");
+                return;
+            }
+
+            var apiResp = await response.Content.ReadFromJsonAsync<ApiResponse>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (apiResp?.IsSuccess == true && apiResp.Result is JsonElement rawResultJson)
+            {
+                var testResult = JsonSerializer.Deserialize<TestResultResponse>(rawResultJson.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                await JS.InvokeVoidAsync("alert", $"Тест завершено!\nВаш результат: {testResult?.Score ?? 0} з {testResult?.MaxScore ?? 0}");
+            }
+            else
+            {
+                var errorMessage = apiResp?.ErrorMessages != null && apiResp.ErrorMessages.Any()
+                                   ? string.Join("\n", apiResp.ErrorMessages)
+                                   : $"Помилка: {response.StatusCode}. Невідома причина.";
+                await JS.InvokeVoidAsync("alert", $"Тест завершено, але не вдалося отримати деталі результату. {errorMessage}");
+            }
         }
-
-        var apiResp = await response.Content.ReadFromJsonAsync<ApiResponse>();
-        var rawResult = ((JsonElement)apiResp.Result).GetRawText();
-        var testResult = JsonSerializer.Deserialize<TestResultResponse>(rawResult);
-
-        await JS.InvokeVoidAsync("alert", $"Test submitted!\nScore: {testResult.Score}/{testResult.MaxScore}");
-        Navigation.NavigateTo("/");
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Виникла помилка під час завершення тесту: {ex.Message}");
+        }
+        finally
+        {
+            Navigation.NavigateTo("/"); // Always redirect after submission attempt
+        }
     }
-
-
 
     private async Task<int> GetCurrentUserId()
     {
         var userIdString = await JS.InvokeAsync<string>("localStorage.getItem", "userId");
         return int.TryParse(userIdString, out int id) ? id : 0;
+    }
+
+    private void ClearErrorMessage()
+    {
+        ErrorMessage = null;
     }
 }

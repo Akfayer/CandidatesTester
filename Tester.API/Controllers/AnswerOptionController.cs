@@ -108,7 +108,7 @@ public class AnswerOptionsController : ControllerBase
 
     [Authorize(Roles = "Admin")]
     [HttpPut]
-    public async Task<ActionResult<ApiResponse>> Update([FromBody] UpdateAnswerOptionRequest dto)
+    public async Task<ActionResult<ApiResponse>> Update ([FromBody] UpdateAnswerOptionRequest dto)
     {
         var response = new ApiResponse();
         if (!ModelState.IsValid)

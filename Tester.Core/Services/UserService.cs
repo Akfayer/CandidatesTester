@@ -9,7 +9,7 @@ using Tester.Core.Services.Interfaces;
 using Tester.Data.Entities;
 using Tester.Data.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using BCrypt.Net;
+using Tester.Data.Enums;
 
 namespace Tester.Core.Services;
 
@@ -53,6 +53,7 @@ public class UserService : IUserService
         var token = GenerateJwtToken(user);
 
         var authModel = _mapper.Map<AuthModel>(user);
+        authModel.Token = token;
 
         return authModel;
     }
@@ -72,10 +73,19 @@ public class UserService : IUserService
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.Now.AddMinutes(Convert.ToDouble(_configuration["Jwt:DurationInMinutes"])),
+            expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:DurationInMinutes"])),
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public async Task<List<UserModel>> GetAllUsersAsync()
+    {
+        var users = await _userRepository.GetQueryable()
+                                         .Where(u => u.Role == UserRole.Candidate)
+                                         .ToListAsync();
+
+        return _mapper.Map<List<UserModel>>(users);
     }
 }
 

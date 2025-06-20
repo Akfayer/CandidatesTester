@@ -1,0 +1,197 @@
+﻿@page "/results"
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+@using Tester.Shared.DTOs
+@using Tester.Shared.DTOs.TestResultDTOs
+@using Tester.Shared.DTOs.TestDTOs
+@using System.Text.Json
+
+<PageTitle>Мої Результати Тестів</PageTitle>
+
+<div class="results-container container mt-4">
+    <h2 class="mb-4 text-center section-title">
+        <i class="bi bi-bar-chart-fill section-icon"></i> Мої Результати Тестів
+    </h2>
+
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="alert alert-danger fade show custom-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill alert-icon"></i> @ErrorMessage
+            <button type="button" class="btn-close" @onclick="ClearErrorMessage" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!UserLoggedIn)
+    {
+        <div class="alert alert-warning text-center login-prompt" role="alert">
+            <i class="bi bi-info-circle-fill login-prompt-icon"></i> Будь ласка, <a href="/login" class="alert-link">увійдіть</a>, щоб переглянути ваші результати тестів.
+        </div>
+    }
+    else if (ResultList == null)
+    {
+        <div class="loading-panel p-4 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Завантаження...</span>
+            </div>
+            <p class="mt-2"><em>Завантаження результатів...</em></p>
+        </div>
+    }
+    else if (!ResultList.Any())
+    {
+        <div class="alert alert-info text-center empty-state" role="alert">
+            <i class="bi bi-info-circle-fill info-icon-small"></i>
+            <p class="mb-0">Ви ще не проходили жодного тесту. <a href="/tests" class="alert-link">Почніть зараз!</a></p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm result-card">
+            <div class="card-header bg-primary text-white card-header-custom">
+                <h4 class="mb-0">Огляд Результатів</h4>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 results-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="test-title-col">Назва Тесту</th>
+                                <th scope="col" class="score-col text-center">Результат</th>
+                                <th scope="col" class="date-col text-center">Дата Проходження</th>
+                                <th scope="col" class="details-col text-center">Деталі</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var result in ResultList.OrderByDescending(r => r.CompletedAt))
+                            {
+                                <tr class="table-row-hover">
+                                    <td class="align-middle test-title-cell">@GetTestTitle(result.TestId)</td>
+                                    <td class="align-middle text-center score-cell">
+                                        <span class="badge @GetScoreBadgeClass(result.Score, result.MaxScore)">@result.Score / @result.MaxScore</span>
+                                    </td>
+                                    <td class="align-middle text-center date-cell">@result.CompletedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td class="align-middle text-center">
+                                        <button class="btn btn-sm btn-outline-primary view-details-btn" @onclick="() => ViewResultDetails(result.TestResultId)" title="Переглянути деталі">
+                                            <i class="bi bi-eye"></i> <span class="d-none d-md-inline">Деталі</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<TestResultResponse>? ResultList;
+    private Dictionary<int, string> TestTitles = new();
+    private string? ErrorMessage;
+    private bool UserLoggedIn = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ErrorMessage = null;
+        var userId = await GetCurrentUserId();
+
+        if (userId == 0)
+        {
+            UserLoggedIn = false;
+            return;
+        }
+
+        UserLoggedIn = true;
+        try
+        {
+            // Отримання результатів
+            var resultsResponse = await Http.GetFromJsonAsync<ApiResponse>($"api/results/user/{userId}");
+            if (resultsResponse?.IsSuccess == true && resultsResponse.Result is JsonElement resultsJson)
+            {
+                var jsonText = resultsJson.GetRawText();
+                ResultList = JsonSerializer.Deserialize<List<TestResultResponse>>(jsonText, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (ResultList != null && ResultList.Any())
+                {
+                    var testIds = ResultList.Select(r => r.TestId).Distinct().ToList();
+
+                    foreach (var testId in testIds)
+                    {
+                        if (!TestTitles.ContainsKey(testId))
+                        {
+                            var testResp = await Http.GetFromJsonAsync<ApiResponse>($"api/tests/{testId}");
+                            if (testResp?.IsSuccess == true && testResp.Result is JsonElement testJson)
+                            {
+                                var testRaw = testJson.GetRawText();
+                                var test = JsonSerializer.Deserialize<TestResponse>(testRaw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                                if (test != null)
+                                {
+                                    TestTitles[testId] = test.TestTitle ?? $"Тест #{testId}";
+                                }
+                                else
+                                {
+                                    TestTitles[testId] = $"Тест #{testId} (Назва не знайдена)";
+                                }
+                            }
+                            else
+                            {
+                                ErrorMessage = $"Не вдалося отримати назву тесту #{testId}: {string.Join("; ", testResp?.ErrorMessages ?? new List<string> { "Невідома помилка." })}";
+                                TestTitles[testId] = $"Тест #{testId} (Помилка)";
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                ErrorMessage = string.Join("; ", resultsResponse?.ErrorMessages ?? new List<string> { "Невідома помилка під час завантаження результатів." });
+            }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            ErrorMessage = $"Помилка підключення до сервера: {httpEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Не вдалося завантажити результати тестів: " + ex.Message;
+        }
+    }
+
+    private async Task<int> GetCurrentUserId()
+    {
+        try
+        {
+            var userIdStr = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userId");
+            return int.TryParse(userIdStr, out var id) ? id : 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting userId from localStorage: {ex.Message}");
+            return 0;
+        }
+    }
+
+    private string GetTestTitle(int testId) =>
+        TestTitles.TryGetValue(testId, out var title) ? title : $"Тест #{testId}";
+
+    private string GetScoreBadgeClass(int score, int maxScore)
+    {
+        if (maxScore == 0) return "bg-secondary";
+        double percentage = (double)score / maxScore;
+        if (percentage >= 0.8) return "bg-success";
+        if (percentage >= 0.5) return "bg-warning text-dark";
+        return "bg-danger";
+    }
+
+    private void ViewResultDetails(int testResultId)
+    {
+        JSRuntime.InvokeVoidAsync("alert", $"Перегляд деталей для результату #{testResultId} (цей функціонал ще не реалізовано).");
+    }
+
+    private void ClearErrorMessage()
+    {
+        ErrorMessage = null;
+    }
+}

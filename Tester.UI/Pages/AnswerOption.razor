@@ -1,74 +1,126 @@
 ﻿@page "/questions/{questionId:int}/answers"
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 @using System.Net.Http.Json
 @using System.Text.Json
 @using Tester.Shared.DTOs
 @using Tester.Shared.DTOs.AnswerOptionDTOs
 
-<h2>Answer Options for Question #@questionId</h2>
+<PageTitle>Варіанти Відповідей для Запитання #@questionId</PageTitle>
 
-@if (!string.IsNullOrWhiteSpace(ErrorMessage))
-{
-    <div class="alert alert-danger">@ErrorMessage</div>
-}
+<div class="answers-management-container container mt-4">
+    <h2 class="mb-4 text-center section-title">
+        <i class="bi bi-ui-checks section-icon"></i> Варіанти Відповідей для Запитання #@questionId
+    </h2>
 
-@if (AnswerOptions is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Answer Text</th>
-                <th>Is Correct</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var option in AnswerOptions)
-            {
-                <tr>
-                    <td>@option.AnswerText</td>
-                    <td>@option.IsCorrect</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" @onclick="() => EditAnswer(option)">Edit</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteAnswer(option.AnswerOptionId)">Delete</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
-<hr />
-<h3>@(Editing ? "Edit Answer Option" : "Add New Answer Option")</h3>
-
-<EditForm Model="CurrentForm" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-
-    <div class="mb-3">
-        <label>Answer Text</label>
-        <InputText class="form-control" @bind-Value="CurrentForm.AnswerText" />
+    <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-outline-secondary btn-back" @onclick="GoBackToQuestions">
+            <i class="bi bi-arrow-left-circle"></i> Повернутись до Запитань
+        </button>
     </div>
 
-    <div class="mb-3">
-        <label>
-            <InputCheckbox @bind-Value="CurrentForm.IsCorrect" />
-            Is Correct
-        </label>
-    </div>
-
-    <button type="submit" class="btn btn-success">
-        @(Editing ? "Update" : "Create")
-    </button>
-    @if (Editing)
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
     {
-        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+        <div class="alert alert-danger fade show custom-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill alert-icon"></i> @ErrorMessage
+            <button type="button" class="btn-close" @onclick="ClearErrorMessage" aria-label="Close"></button>
+        </div>
     }
-</EditForm>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white card-header-custom">
+            <h4 class="mb-0">Список Варіантів Відповідей</h4>
+        </div>
+        <div class="card-body p-0">
+            @if (AnswerOptions is null)
+            {
+                <div class="loading-panel p-4 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Завантаження...</span>
+                    </div>
+                    <p class="mt-2"><em>Завантаження варіантів відповідей...</em></p>
+                </div>
+            }
+            else if (!AnswerOptions.Any())
+            {
+                <div class="p-4 text-center text-muted empty-state">
+                    <i class="bi bi-info-circle-fill info-icon-small"></i>
+                    <p class="mb-0">Наразі немає варіантів відповідей для цього запитання. Додайте перший варіант!</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 answers-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="answer-text-col">Текст Відповіді</th>
+                                <th scope="col" class="is-correct-col text-center">Правильна</th>
+                                <th scope="col" class="text-center actions-col">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var option in AnswerOptions)
+                            {
+                                <tr class="table-row-hover">
+                                    <td class="align-middle answer-text-cell">@option.AnswerText</td>
+                                    <td class="align-middle text-center is-correct-cell">
+                                        <i class="bi @(option.IsCorrect ? "bi-check-circle-fill text-success" : "bi-x-circle-fill text-danger")"
+                                           title="@(option.IsCorrect ? "Коректна відповідь" : "Некоректна відповідь")"></i>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <button class="btn btn-info btn-sm me-2 action-btn" @onclick="() => EditAnswer(option)" title="Редагувати варіант">
+                                            <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Редагувати</span>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm action-btn" @onclick="() => DeleteAnswer(option.AnswerOptionId)" title="Видалити варіант">
+                                            <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Видалити</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-5">
+        <div class="card-header bg-success text-white card-header-custom">
+            <h4 class="mb-0">@(Editing ? "Редагувати Варіант Відповіді" : "Додати Новий Варіант Відповіді")</h4>
+        </div>
+        <div class="card-body">
+            <EditForm Model="CurrentForm" OnValidSubmit="HandleValidSubmit" FormName="answerOptionForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-warning" />
+
+                <div class="mb-3">
+                    <label for="answerText" class="form-label">Текст Відповіді:</label>
+                    <InputText id="answerText" class="form-control form-control-text" @bind-Value="CurrentForm.AnswerText" placeholder="Введіть текст варіанта відповіді" />
+                    <ValidationMessage For="@(() => CurrentForm.AnswerText)" class="text-danger" />
+                </div>
+
+                <div class="mb-3 form-check form-switch">
+                    <InputCheckbox id="isCorrect" class="form-check-input" @bind-Value="CurrentForm.IsCorrect" />
+                    <label class="form-check-label" for="isCorrect">Це коректна відповідь?</label>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    @if (Editing)
+                    {
+                        <button type="button" class="btn btn-secondary me-2 cancel-btn" @onclick="CancelEdit">
+                            <i class="bi bi-x-circle"></i> Скасувати
+                        </button>
+                    }
+                    <button type="submit" class="btn btn-success submit-btn">
+                        <i class="bi @(Editing ? "bi-save" : "bi-plus-circle")"></i> @(Editing ? "Оновити" : "Створити")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
 
 @code {
     [Parameter]
@@ -89,99 +141,124 @@ else
 
     private async Task LoadAnswerOptions()
     {
+        ErrorMessage = null; 
         try
         {
             var response = await Http.GetFromJsonAsync<ApiResponse>($"api/answer_options/question/{questionId}");
             if (response?.IsSuccess == true)
             {
-                var raw = ((JsonElement)response.Result).GetRawText();
-                AnswerOptions = JsonSerializer.Deserialize<List<AnswerOptionResponse>>(raw);
+                var raw = ((JsonElement)response.Result!).GetRawText();
+                AnswerOptions = JsonSerializer.Deserialize<List<AnswerOptionResponse>>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
             else
             {
-                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string>());
+                ErrorMessage = string.Join("; ", response?.ErrorMessages ?? new List<string> { "Невідома помилка під час завантаження варіантів відповідей." });
             }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            ErrorMessage = $"Помилка підключення до сервера: {httpEx.Message}";
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Failed to load answers: " + ex.Message;
+            ErrorMessage = "Не вдалося завантажити варіанти відповідей: " + ex.Message;
         }
     }
 
     private async Task HandleValidSubmit()
     {
+        ErrorMessage = null; 
         try
         {
+            HttpResponseMessage response;
             if (!Editing)
             {
-                var response = await Http.PostAsJsonAsync("api/answer_options", CurrentForm);
-                if (response.IsSuccessStatusCode)
-                {
-                    await LoadAnswerOptions();
-                    ResetForm();
-                }
-                else
-                {
-                    ErrorMessage = $"Failed to create. Status code: {response.StatusCode}";
-                }
+                response = await Http.PostAsJsonAsync("api/answer_options", CurrentForm);
             }
             else
             {
                 var updateDto = new UpdateAnswerOptionRequest
-                {
-                    QuestionId = CurrentForm.QuestionId,
-                    AnswerText = CurrentForm.AnswerText,
-                    IsCorrect = CurrentForm.IsCorrect
-                };
+                    {
+                        QuestionId = CurrentForm.QuestionId,
+                        AnswerText = CurrentForm.AnswerText,
+                        IsCorrect = CurrentForm.IsCorrect
+                    };
+                response = await Http.PutAsJsonAsync($"api/answer_options/{EditingOptionId}", updateDto);
+            }
 
-                var response = await Http.PutAsJsonAsync("api/answer_options", updateDto);
-                if (response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadAnswerOptions();
+                ResetForm();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                try
                 {
-                    await LoadAnswerOptions();
-                    ResetForm();
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse>(errorContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    ErrorMessage = string.Join("; ", apiResponse?.ErrorMessages ?? new List<string> { $"Помилка: {response.StatusCode}. Невідома причина." });
                 }
-                else
+                catch (JsonException)
                 {
-                    ErrorMessage = $"Failed to update. Status code: {response.StatusCode}";
+                    ErrorMessage = $"Помилка: {response.StatusCode}. Деталі: {errorContent}";
                 }
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Error submitting form: " + ex.Message;
+            ErrorMessage = "Помилка відправки форми: " + ex.Message;
         }
     }
 
-    private void EditAnswer(AnswerOptionResponse option)
+    private async Task EditAnswer(AnswerOptionResponse option)
     {
+        ErrorMessage = null; 
         CurrentForm = new CreateAnswerOptionRequest
-        {
-            QuestionId = option.QuestionId,
-            AnswerText = option.AnswerText,
-            IsCorrect = option.IsCorrect
-        };
+            {
+                QuestionId = option.QuestionId,
+                AnswerText = option.AnswerText,
+                IsCorrect = option.IsCorrect
+            };
 
         Editing = true;
         EditingOptionId = option.AnswerOptionId;
+        await JSRuntime.InvokeVoidAsync("scrollIntoView", "answerOptionForm");
     }
 
     private async Task DeleteAnswer(int id)
     {
+        ErrorMessage = null; 
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Ви впевнені, що хочете видалити варіант відповіді #{id}?"))
+        {
+            return;
+        }
+
         try
         {
             var response = await Http.DeleteAsync($"api/answer_options/{id}");
             if (response.IsSuccessStatusCode)
             {
                 await LoadAnswerOptions();
+                ResetForm();
             }
             else
             {
-                ErrorMessage = $"Failed to delete. Status code: {response.StatusCode}";
+                var errorContent = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse>(errorContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    ErrorMessage = string.Join("; ", apiResponse?.ErrorMessages ?? new List<string> { $"Помилка видалення: {response.StatusCode}. Невідома причина." });
+                }
+                catch (JsonException)
+                {
+                    ErrorMessage = $"Помилка видалення: {response.StatusCode}. Деталі: {errorContent}";
+                }
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Failed to delete answer: " + ex.Message;
+            ErrorMessage = "Не вдалося видалити варіант відповіді: " + ex.Message;
         }
     }
 
@@ -192,5 +269,16 @@ else
         CurrentForm = new CreateAnswerOptionRequest { QuestionId = questionId };
         Editing = false;
         EditingOptionId = 0;
+        ErrorMessage = null; 
+    }
+
+    private void ClearErrorMessage()
+    {
+        ErrorMessage = null;
+    }
+
+    private async Task GoBackToQuestions()
+    {
+        Navigation.NavigateTo($"/tests/{questionId}/questions");
     }
 }

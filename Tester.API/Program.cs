@@ -4,6 +4,7 @@ using System.Text;
 using Tester.Core;
 using Tester.Shared;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 namespace Tester.API;
 
@@ -46,7 +47,6 @@ public class Program
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = builder.Configuration["Jwt:Issuer"],
                 ValidAudience = builder.Configuration["Jwt:Audience"],
-                // Важливо: переконайтесь, що ключ не null
                 IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]
                                            ?? throw new InvalidOperationException("JWT Key not configured.")))

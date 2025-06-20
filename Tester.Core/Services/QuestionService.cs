@@ -26,14 +26,26 @@ public class QuestionService:IQuestionService
         await _questionRepository.CreateAsync(question);
     }
 
-    public async Task ChangeQuestionTypeAsync(QuestionModel questionModel)
+    public async Task UpdateQuestionAsync(QuestionModel questionModel)
     {
         Question question = await _questionRepository.GetByIdAsync(questionModel.QuestionId);
-        if (question is null)
-            throw new Exception("Question haven't been found");
-
+        if (question == null)
+        {
+            throw new KeyNotFoundException($"Питання з ID {questionModel.QuestionId} не знайдено.");
+        }
         _mapper.Map(questionModel, question);
         await _questionRepository.UpdateAsync(question);
+    }
+
+
+    public async Task DeleteQuestionAsync(int questionId)
+    {
+        var existingQuestion = await _questionRepository.GetByIdAsync(questionId);
+        if (existingQuestion == null)
+        {
+            throw new KeyNotFoundException($"Питання з ID {questionId} не знайдено.");
+        }
+        await _questionRepository.DeleteAsync(existingQuestion);
     }
 
     public async Task<List<QuestionModel>> GetQuestionsByTestIdAsync(int testId)
